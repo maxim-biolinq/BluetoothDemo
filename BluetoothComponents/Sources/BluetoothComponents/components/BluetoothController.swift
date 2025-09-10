@@ -35,7 +35,7 @@ public class BluetoothController: NSObject, ObservableObject, CBCentralManagerDe
 
     public override init() {
         super.init()
-        centralManager = CBCentralManager(delegate: self, queue: .main, options: [
+        centralManager = CBCentralManager(delegate: self, queue: .global(), options: [
             CBCentralManagerOptionRestoreIdentifierKey: "com.biolinq.gemini.bluetooth",
             CBCentralManagerOptionShowPowerAlertKey: true
         ])

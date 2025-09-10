@@ -23,9 +23,13 @@ public class PeripheralService: NSObject, ObservableObject {
 
     // MARK: - Private Properties
     private let peripheral: CBPeripheral
+    private let messageParser = MessageParser()
     private var commandCharacteristic: CBCharacteristic?
     private var responseCharacteristic: CBCharacteristic?
-    private var pendingInfoRequest: Bool = false
+
+    // Request correlation
+    private var pendingRequests = [UInt32: PendingRequest]()
+    private var nextSeqNum: UInt32 = 1
 
     private var cancellables = Set<AnyCancellable>()
 
@@ -56,17 +60,25 @@ public class PeripheralService: NSObject, ObservableObject {
     // MARK: - Command Implementations
 
     private func requestInfo() {
+        // Clean up any timed-out requests before sending new one
+        cleanupTimedOutRequests()
+
         guard let commandChar = commandCharacteristic else {
             commandResponseOutput.send(.error("Not ready: command characteristic not available"))
             return
         }
 
         do {
-            let bleMessage = constructInfoRequest()
+            let seqNum = nextSeqNum
+            nextSeqNum += 1
+
+            let bleMessage = constructInfoRequest(seqNum: seqNum)
             let data = try bleMessage.serializedData()
 
-            print("PeripheralService: Sending info request: \(data.map { String(format: "%02x", $0) }.joined(separator: " "))")
-            pendingInfoRequest = true
+            print("PeripheralService: Sending info request (seq: \(seqNum)): \(data.map { String(format: "%02x", $0) }.joined(separator: " "))")
+
+            // Track pending request
+            pendingRequests[seqNum] = PendingRequest(command: .requestInfo, timestamp: Date())
 
             peripheral.writeValue(data, for: commandChar, type: CBCharacteristicWriteType.withResponse)
         } catch {
@@ -75,9 +87,9 @@ public class PeripheralService: NSObject, ObservableObject {
         }
     }
 
-    private func constructInfoRequest() -> Iris_BLEMessage {
+    private func constructInfoRequest(seqNum: UInt32) -> Iris_BLEMessage {
         var bleMessage = Iris_BLEMessage()
-        bleMessage.seqNum = 1 // TODO: Implement proper sequence numbering
+        bleMessage.seqNum = seqNum
 
         var rxMessage = Iris_BLEMessageChRx()
         var request = Iris_BLEMessageChRxRequest()
@@ -88,6 +100,8 @@ public class PeripheralService: NSObject, ObservableObject {
 
         return bleMessage
     }
+
+
 }
 
 // MARK: - CBPeripheralDelegate
@@ -177,91 +191,67 @@ extension PeripheralService: CBPeripheralDelegate {
         if characteristic.uuid == PeripheralService.RESPONSE_CHAR_UUID {
             if let data = characteristic.value {
                 print("PeripheralService: Received response data: \(data.map { String(format: "%02x", $0) }.joined(separator: " "))")
-                parseNotificationData(data)
+                handleReceivedData(data)
             }
         }
     }
 }
 
-// MARK: - Response Parsing
+// MARK: - Response Handling
 
 extension PeripheralService {
 
-    private func parseNotificationData(_ data: Data) {
-        do {
-            let bleMessage = try Iris_BLEMessage(serializedBytes: data)
+    private func handleReceivedData(_ data: Data) {
+        // Clean up any timed-out requests when receiving data
+        cleanupTimedOutRequests()
 
-            // Check if this is a tx_msg channel
-            if case .txMsg(let txMsg) = bleMessage.channel {
-                parseTxMessage(txMsg)
-            } else {
-                print("PeripheralService: Received notification on unexpected channel")
-            }
-        } catch {
-            print("PeripheralService: Error parsing notification data: \(error)")
+        let parseResult = messageParser.parse(data)
+
+        switch parseResult {
+        case .success(let message):
+            handleParsedMessage(message)
+        case .failure(let error):
+            print("PeripheralService: Parsing error: \(error.localizedDescription)")
             commandResponseOutput.send(.error("Failed to parse response: \(error.localizedDescription)"))
         }
     }
 
-    private func parseTxMessage(_ txMsg: Iris_BLEMessageChTx) {
-        switch txMsg.msg {
-        case .response(let response):
-            parseTxResponse(response)
-        case .event(let event):
-            parseTxEvent(event)
-        case .none:
-            print("PeripheralService: Received tx message with no content")
+    private func handleParsedMessage(_ message: ParsedMessage) {
+        switch message {
+        case .infoResponse(let infoData, let seqNum):
+            handleInfoResponse(infoData, seqNum: seqNum)
+        case .statusEvent(let status, let seqNum):
+            print("PeripheralService: Received status event (seq: \(seqNum)): \(status)")
         }
     }
 
-    private func parseTxResponse(_ response: Iris_BLEMessageChTxResponse) {
-        switch response.msg {
-        case .info(let info):
-            handleInfoResponse(info)
-        case .none:
-            print("PeripheralService: Received response with no content")
-        }
-    }
+    private func handleInfoResponse(_ infoData: InfoResponseData, seqNum: UInt32) {
+        print("PeripheralService: InfoResponse (seq: \(seqNum)):")
+        print("  num_blocks: \(infoData.numBlocks)")
+        print("  timestamp: \(infoData.timestamp)")
+        print("  status: \(infoData.status)")
 
-    private func parseTxEvent(_ event: Iris_BLEMessageChTxEvent) {
-        switch event.msg {
-        case .status(let status):
-            print("PeripheralService: Received status event: \(status)")
-        case .none:
-            print("PeripheralService: Received event with no content")
-        }
-    }
-
-    private func handleInfoResponse(_ info: Iris_InfoResponse) {
-        print("PeripheralService: InfoResponse:")
-        print("  num_blocks: \(info.numBlocks)")
-        print("  timestamp: \(info.timestamp)")
-        print("  status: \(info.status)")
-
-        if pendingInfoRequest {
-            pendingInfoRequest = false
-            let infoData = InfoResponseData(
-                numBlocks: info.numBlocks,
-                timestamp: info.timestamp,
-                status: statusToString(info.status)
-            )
+        // Check if this matches a pending request
+        if let pendingRequest = pendingRequests.removeValue(forKey: seqNum) {
+            print("PeripheralService: Matched response to pending \(pendingRequest.command) request")
             commandResponseOutput.send(.infoResponse(infoData))
+        } else {
+            print("PeripheralService: Warning - received response for unknown sequence number: \(seqNum)")
         }
     }
 
-    private func statusToString(_ status: Iris_Status) -> String {
-        switch status {
-        case .unspecified:
-            return "unspecified"
-        case .ok:
-            return "ok"
-        case .error:
-            return "error"
-        case .UNRECOGNIZED(let code):
-            return "unrecognized(\(code))"
+    private func cleanupTimedOutRequests() {
+        let now = Date()
+        let timedOutRequests = pendingRequests.filter { (_, request) in
+            now.timeIntervalSince(request.timestamp) > PeripheralService.REQUEST_TIMEOUT
         }
-    }
-}
+
+        for (seqNum, request) in timedOutRequests {
+            print("PeripheralService: Request \(request.command) with seq \(seqNum) timed out")
+            pendingRequests.removeValue(forKey: seqNum)
+            commandResponseOutput.send(.error("Request timeout: \(request.command)"))
+        }
+    }}
 
 // MARK: - Public Data Types
 
@@ -304,4 +294,14 @@ public struct InfoResponseData {
         self.timestamp = timestamp
         self.status = status
     }
+}
+
+private struct PendingRequest {
+    let command: PeripheralCommand
+    let timestamp: Date
+}
+
+// MARK: - Configuration
+private extension PeripheralService {
+    static let REQUEST_TIMEOUT: TimeInterval = 30.0 // 30 seconds
 }
