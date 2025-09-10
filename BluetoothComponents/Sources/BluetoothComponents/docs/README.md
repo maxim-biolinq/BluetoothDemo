@@ -18,37 +18,47 @@ This directory contains architecture documentation for the BluetoothComponents l
 
 ## Quick Start
 
-The BluetoothComponents library provides a modular Bluetooth system with three main components:
+The BluetoothComponents library provides a modular Bluetooth system with three core components:
 
 1. **BluetoothController** - Unified scanning and connection management
 2. **PeripheralFilter** - Real-time device filtering and search
-3. **BluetoothSession/PeripheralService** - Connection-scoped communication
+3. **PeripheralService** - Connection-scoped BLE communication
 
-### Basic Usage Pattern
+**BluetoothSession** is an optional convenience wrapper that ties these components together. Apps can choose to wire up the individual components themselves for more control.
 
+### Usage Patterns
+
+#### Option 1: Individual Components (Full Control)
 ```swift
 // 1. Create and wire components
 let controller = BluetoothController()
 let filter = PeripheralFilter()
 
-// Wire scanner output to filter input
+// Wire controller output to filter input
 controller.$discoveredPeripherals
     .sink { peripherals in
         filter.peripheralsInput.send(peripherals)
     }
     .store(in: &cancellables)
 
-// 2. Start scanning
+// 2. Start scanning and connect
 controller.scanInput.send(.start)
-
-// 3. Connect to device
 controller.connectionInput.send(.connect(peripheral))
 
-// 4. Create session when connected
+// 3. Create service when connected
 if let peripheral = controller.connectedPeripheral {
-    let session = BluetoothSession(controller: controller, peripheral: peripheral)
-    let info = await session.requestInfo()
+    let service = PeripheralService(peripheral: peripheral)
+    service.commandInput.send(.requestInfo)
 }
+```
+
+#### Option 2: Convenience Wrapper (Simplified)
+```swift
+// BluetoothSession handles component wiring internally
+let session = BluetoothSession()
+session.startScanning()
+await session.connect(to: peripheral)
+let info = await session.requestInfo()
 ```
 
 ## Architecture Principles

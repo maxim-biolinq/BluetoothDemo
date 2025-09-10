@@ -6,67 +6,98 @@ This document describes the current Bluetooth component architecture and how com
 
 ```mermaid
 graph TD
-    %% External Inputs
-    UT[User Search Text]
-    UB1[User Button: Start Scan]
-    UB2[User Button: Stop/Clear]
-    UB3[User Button: Connect]
-    UB4[User Button: Get Info]
-
-    %% Main Components
-    subgraph "BluetoothController"
-        BSI[scanInput: PassthroughSubject]
-        BCI[connectionInput: PassthroughSubject]
-        BSO[discoveredPeripherals: @Published]
-        BCO[connectionStates: @Published]
-        BCP[connectedPeripheral: @Published]
+    %% User Interface Layer
+    subgraph "User Interface"
+        UT[Search Text Field]
+        UB1[Start Scan Button]
+        UB2[Stop/Clear Button]
+        UB3[Connect Button]
+        UB4[Get Info Button]
     end
 
-    subgraph "PeripheralFilter"
-        PFI1[peripheralsInput: PassthroughSubject]
-        PFI2[filterTextInput: CurrentValueSubject]
-        PFO[filteredPeripherals: @Published]
+    %% BluetoothSession Boundary
+    subgraph BS["BluetoothSession Wrapper"]
+        %% BluetoothController Component
+        subgraph BC_Group["BluetoothController"]
+            direction TB
+            subgraph BC_IN[" "]
+                BCSI["🔌 scanInput"]
+                BCCI["🔌 connectionInput"]
+            end
+            BC["Central Manager &<br/>State Management"]
+            subgraph BC_OUT[" "]
+                BSO["📡 discoveredPeripherals"]
+                BCO["📡 connectionStates"]
+                BCP["📡 connectedPeripheral"]
+            end
+            BC_IN --> BC --> BC_OUT
+        end
+
+        %% PeripheralFilter Component
+        subgraph PF_Group["PeripheralFilter"]
+            direction TB
+            subgraph PF_IN[" "]
+                PFI1["🔌 peripheralsInput"]
+                PFI2["🔌 filterTextInput"]
+            end
+            PF["Filter Logic"]
+            subgraph PF_OUT[" "]
+                PFO["📡 filteredPeripherals"]
+            end
+            PF_IN --> PF --> PF_OUT
+        end
+
+        %% PeripheralService Component
+        subgraph PS_Group["PeripheralService"]
+            direction TB
+            subgraph PS_IN[" "]
+                PSCI["🔌 commandInput"]
+            end
+            PS["BLE Communication"]
+            subgraph PS_OUT[" "]
+                PSSO["📡 serviceState"]
+                PSCO["📡 infoResponse"]
+            end
+            PS_IN --> PS --> PS_OUT
+        end
     end
 
-    subgraph "BluetoothSession (when connected)"
-        BSS[BluetoothSession]
-        PS[PeripheralService]
-    end
+    %% UI View Layer
+    BV[BluetoothView<br/>SwiftUI Bindings]
 
-    subgraph "BluetoothView"
-        BV[View Logic & State]
-    end
+    %% User Input Connections
+    UT --> PFI2
+    UB1 --> BCSI
+    UB2 --> BCSI
+    UB3 --> BCCI
+    UB4 --> PSCI
 
-    %% User Input Wiring
-    UT --> |TextField binding| PFI2
-    UB1 --> |send .start| BSI
-    UB2 --> |send .stop/.clear| BSI
-    UB3 --> |send .connect| BCI
-    UB4 --> |via BluetoothSession| PS
+    %% Component Interconnections
+    BSO --> PFI1
+    BCP --> PS
 
-    %% Component Wiring
-    BSO --> |"onReceive -> send"| PFI1
-    PFO --> |"@Published binding"| BV
-    BCO --> |"@Published binding"| BV
-    BCP --> |"creates when connected"| BSS
-
-    %% Data Flow Labels
-    BSO -.- |"[CBPeripheral]"| PFI1
-    PFO -.- |"[CBPeripheral] filtered"| BV
-    BCO -.- |"[UUID: CBPeripheralState]"| BV
-    BCP -.- |"CBPeripheral?"| BSS
+    %% Output to UI
+    PFO --> BV
+    BCO --> BV
+    PSSO --> BV
+    PSCO --> BV
 
     %% Styling
-    classDef userInput fill:#fff3e0
-    classDef component fill:#e1f5fe
-    classDef input fill:#f3e5f5
-    classDef output fill:#e8f5e8
-    classDef view fill:#fce4ec
+    classDef userInput fill:#fff3e0,stroke:#ff9800,stroke-width:2px
+    classDef componentCore fill:#e3f2fd,stroke:#2196f3,stroke-width:2px
+    classDef inputSection fill:#f0f8f0,stroke:#4caf50,stroke-width:1px
+    classDef outputSection fill:#fff8f0,stroke:#ff9800,stroke-width:1px
+    classDef view fill:#fce4ec,stroke:#e91e63,stroke-width:2px
+    classDef wrapper fill:#ffffff,stroke:#999999,stroke-width:2px,stroke-dasharray: 5 5
+    classDef componentGroup fill:#ffffff,stroke:#cccccc,stroke-width:2px,rx:10,ry:10
 
     class UT,UB1,UB2,UB3,UB4 userInput
-    class BSI,BCI,PFI1,PFI2 input
-    class BSO,BCO,BCP,PFO output
+    class BC,PF,PS componentCore
+    class BC_IN,PF_IN,PS_IN inputSection
+    class BC_OUT,PF_OUT,PS_OUT outputSection
     class BV view
+    class BS wrapper
+    class BC_Group,PF_Group,PS_Group componentGroup
 ```
 
 ## Component Architecture
