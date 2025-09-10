@@ -1,0 +1,35 @@
+{
+  "": {
+    "swift-dependencies": "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/.build/index-build/arm64-apple-macosx/debug/BluetoothComponentsTests.build/master.swiftdeps"
+  },
+  "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/Tests/BluetoothComponentsTests/BluetoothControllerTests.swift": {
+    "dependencies": "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/.build/index-build/arm64-apple-macosx/debug/BluetoothComponentsTests.build/BluetoothControllerTests.d",
+    "object": "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/.build/index-build/arm64-apple-macosx/debug/BluetoothComponentsTests.build/BluetoothControllerTests.swift.o",
+    "swiftmodule": "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/.build/index-build/arm64-apple-macosx/debug/BluetoothComponentsTests.build/BluetoothControllerTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/.build/index-build/arm64-apple-macosx/debug/BluetoothComponentsTests.build/BluetoothControllerTests.swiftdeps"
+  },
+  "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/Tests/BluetoothComponentsTests/BluetoothScannerTests.swift": {
+    "dependencies": "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/.build/index-build/arm64-apple-macosx/debug/BluetoothComponentsTests.build/BluetoothScannerTests.d",
+    "object": "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/.build/index-build/arm64-apple-macosx/debug/BluetoothComponentsTests.build/BluetoothScannerTests.swift.o",
+    "swiftmodule": "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/.build/index-build/arm64-apple-macosx/debug/BluetoothComponentsTests.build/BluetoothScannerTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/.build/index-build/arm64-apple-macosx/debug/BluetoothComponentsTests.build/BluetoothScannerTests.swiftdeps"
+  },
+  "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/Tests/BluetoothComponentsTests/ComponentIntegrationTests.swift": {
+    "dependencies": "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/.build/index-build/arm64-apple-macosx/debug/BluetoothComponentsTests.build/ComponentIntegrationTests.d",
+    "object": "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/.build/index-build/arm64-apple-macosx/debug/BluetoothComponentsTests.build/ComponentIntegrationTests.swift.o",
+    "swiftmodule": "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/.build/index-build/arm64-apple-macosx/debug/BluetoothComponentsTests.build/ComponentIntegrationTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/.build/index-build/arm64-apple-macosx/debug/BluetoothComponentsTests.build/ComponentIntegrationTests.swiftdeps"
+  },
+  "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/Tests/BluetoothComponentsTests/PeripheralFilterTests.swift": {
+    "dependencies": "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/.build/index-build/arm64-apple-macosx/debug/BluetoothComponentsTests.build/PeripheralFilterTests.d",
+    "object": "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/.build/index-build/arm64-apple-macosx/debug/BluetoothComponentsTests.build/PeripheralFilterTests.swift.o",
+    "swiftmodule": "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/.build/index-build/arm64-apple-macosx/debug/BluetoothComponentsTests.build/PeripheralFilterTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/.build/index-build/arm64-apple-macosx/debug/BluetoothComponentsTests.build/PeripheralFilterTests.swiftdeps"
+  },
+  "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/Tests/BluetoothComponentsTests/TestUtilities.swift": {
+    "dependencies": "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/.build/index-build/arm64-apple-macosx/debug/BluetoothComponentsTests.build/TestUtilities.d",
+    "object": "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/.build/index-build/arm64-apple-macosx/debug/BluetoothComponentsTests.build/TestUtilities.swift.o",
+    "swiftmodule": "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/.build/index-build/arm64-apple-macosx/debug/BluetoothComponentsTests.build/TestUtilities~partial.swiftmodule",
+    "swift-dependencies": "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/.build/index-build/arm64-apple-macosx/debug/BluetoothComponentsTests.build/TestUtilities.swiftdeps"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "": {
+    "swift-dependencies": "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/.build/index-build/arm64-apple-macosx/debug/BluetoothComponentsPackageTests.build/master.swiftdeps"
+  },
+  "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/.build/index-build/arm64-apple-macosx/debug/BluetoothComponentsPackageTests.derived/runner.swift": {
+    "dependencies": "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/.build/index-build/arm64-apple-macosx/debug/BluetoothComponentsPackageTests.build/runner.d",
+    "object": "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/.build/index-build/arm64-apple-macosx/debug/BluetoothComponentsPackageTests.build/runner.swift.o",
+    "swiftmodule": "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/.build/index-build/arm64-apple-macosx/debug/BluetoothComponentsPackageTests.build/runner~partial.swiftmodule",
+    "swift-dependencies": "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/.build/index-build/arm64-apple-macosx/debug/BluetoothComponentsPackageTests.build/runner.swiftdeps"
+  }
+}

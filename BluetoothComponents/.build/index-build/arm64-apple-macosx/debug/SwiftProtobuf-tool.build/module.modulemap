@@ -1,0 +1,4 @@
+module SwiftProtobuf {
+    header "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/.build/index-build/arm64-apple-macosx/debug/SwiftProtobuf-tool.build/SwiftProtobuf-Swift.h"
+    requires objc
+}

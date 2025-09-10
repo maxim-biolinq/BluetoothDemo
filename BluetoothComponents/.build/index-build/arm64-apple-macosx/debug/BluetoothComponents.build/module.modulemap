@@ -1,0 +1,4 @@
+module BluetoothComponents {
+    header "/Users/maximtarasov/Documents/BluetoothDemo/BluetoothComponents/.build/index-build/arm64-apple-macosx/debug/BluetoothComponents.build/BluetoothComponents-Swift.h"
+    requires objc
+}

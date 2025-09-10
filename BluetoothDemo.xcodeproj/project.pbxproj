@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		CA6149352E5D1CCD008BCC98 /* BluetoothComponents in Frameworks */ = {isa = PBXBuildFile; productRef = CA6149342E5D1CCD008BCC98 /* BluetoothComponents */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		CA61490F2E5D1BD6008BCC98 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -29,9 +33,22 @@
 		CA6149182E5D1BD6008BCC98 /* BluetoothDemoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BluetoothDemoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		CA6149372E5D1D0B008BCC98 /* Exceptions for "BluetoothDemo" folder in "BluetoothDemo" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = CA6148FF2E5D1BD4008BCC98 /* BluetoothDemo */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		CA6149022E5D1BD4008BCC98 /* BluetoothDemo */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				CA6149372E5D1D0B008BCC98 /* Exceptions for "BluetoothDemo" folder in "BluetoothDemo" target */,
+			);
 			path = BluetoothDemo;
 			sourceTree = "<group>";
 		};
@@ -52,6 +69,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CA6149352E5D1CCD008BCC98 /* BluetoothComponents in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +130,7 @@
 			);
 			name = BluetoothDemo;
 			packageProductDependencies = (
+				CA6149342E5D1CCD008BCC98 /* BluetoothComponents */,
 			);
 			productName = BluetoothDemo;
 			productReference = CA6149002E5D1BD4008BCC98 /* BluetoothDemo.app */;
@@ -195,6 +214,9 @@
 			);
 			mainGroup = CA6148F72E5D1BD4008BCC98;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				CA6149332E5D1CCD008BCC98 /* XCLocalSwiftPackageReference "BluetoothComponents" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = CA6149012E5D1BD4008BCC98 /* Products */;
 			projectDirPath = "";
@@ -397,6 +419,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BluetoothDemo/Info.plist;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -436,6 +459,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BluetoothDemo/Info.plist;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -593,6 +617,20 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		CA6149332E5D1CCD008BCC98 /* XCLocalSwiftPackageReference "BluetoothComponents" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = BluetoothComponents;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		CA6149342E5D1CCD008BCC98 /* BluetoothComponents */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = BluetoothComponents;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = CA6148F82E5D1BD4008BCC98 /* Project object */;
 }
