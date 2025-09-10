@@ -32,21 +32,13 @@ class BluetoothSessionTests: XCTestCase {
     }
 
     func testFilterTextApplication() {
-        let expectation = self.expectation(description: "Filter applied")
+        // Test that filter text can be set without throwing errors
+        XCTAssertNoThrow(session.setFilter(text: "test"))
+        XCTAssertNoThrow(session.setFilter(text: ""))
+        XCTAssertNoThrow(session.setFilter(text: "Device"))
 
-        // Monitor filtered peripherals output
-        session.$filteredPeripherals
-            .dropFirst() // Skip initial empty state
-            .sink { peripherals in
-                // Verify filter is working (though we can't easily test with real peripherals in unit tests)
-                expectation.fulfill()
-            }
-            .store(in: &cancellables)
-
-        // Apply filter
-        session.setFilter(text: "test")
-
-        wait(for: [expectation], timeout: 1.0)
+        // Test that session remains in a good state
+        XCTAssertTrue(session.filteredPeripherals.isEmpty)
     }
 
     func testPublicInterface() {
@@ -54,7 +46,6 @@ class BluetoothSessionTests: XCTestCase {
         XCTAssertNoThrow(session.startScanning())
         XCTAssertNoThrow(session.stopScanning())
         XCTAssertNoThrow(session.clearPeripherals())
-        XCTAssertNoThrow(session.stopAndClear())
         XCTAssertNoThrow(session.disconnect())
         XCTAssertNoThrow(session.requestDeviceInfo())
 

@@ -23,8 +23,8 @@ class BluetoothControllerTests: XCTestCase {
 
     func testControllerInitialization() {
         // Test that controller initializes with empty peripherals and connections
-        XCTAssertTrue(controller.peripheralsOutput.value.isEmpty)
-        XCTAssertTrue(controller.connectionOutput.value.isEmpty)
+        XCTAssertTrue(controller.discoveredPeripherals.isEmpty)
+        XCTAssertTrue(controller.connectionStates.isEmpty)
     }
 
     func testScanInputSender() {
@@ -48,7 +48,7 @@ class BluetoothControllerTests: XCTestCase {
         var receivedPeripherals: [CBPeripheral] = []
         let expectation = XCTestExpectation(description: "Peripherals output received")
 
-        controller.peripheralsOutput
+        controller.$discoveredPeripherals
             .sink { peripherals in
                 receivedPeripherals = peripherals
                 expectation.fulfill()
@@ -64,7 +64,7 @@ class BluetoothControllerTests: XCTestCase {
         // Note: We can't easily test with real peripherals in unit tests
         // but we can verify the clear behavior
         controller.scanInput.send(.clear)
-        XCTAssertTrue(controller.peripheralsOutput.value.isEmpty)
+        XCTAssertTrue(controller.discoveredPeripherals.isEmpty)
     }
 
     func testConnectionOutputPublisher() {
@@ -72,7 +72,7 @@ class BluetoothControllerTests: XCTestCase {
         var receivedStates: [UUID: CBPeripheralState] = [:]
         let expectation = XCTestExpectation(description: "Connection output received")
 
-        controller.connectionOutput
+        controller.$connectionStates
             .sink { states in
                 receivedStates = states
                 expectation.fulfill()

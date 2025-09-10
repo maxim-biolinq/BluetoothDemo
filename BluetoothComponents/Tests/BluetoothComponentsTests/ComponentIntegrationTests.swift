@@ -28,7 +28,7 @@ class ComponentIntegrationTests: XCTestCase {
         // Test that components can be wired together without crashing
 
         // Wire controller output to filter input
-        controller.peripheralsOutput
+        controller.$discoveredPeripherals
             .sink { peripherals in
                 self.filter.peripheralsInput.send(peripherals)
             }
@@ -64,7 +64,7 @@ class ComponentIntegrationTests: XCTestCase {
     func testConnectionIntegration() {
         // Test that controller can handle connections
         var connectionStates: [UUID: CBPeripheralState] = [:]
-        controller.connectionOutput
+        controller.$connectionStates
             .sink { connectionStates = $0 }
             .store(in: &cancellables)
 
@@ -76,7 +76,7 @@ class ComponentIntegrationTests: XCTestCase {
         // Test the complete structure like BluetoothView uses
 
         // Wire controller to filter
-        controller.peripheralsOutput
+        controller.$discoveredPeripherals
             .sink { peripherals in
                 self.filter.peripheralsInput.send(peripherals)
             }
@@ -92,7 +92,7 @@ class ComponentIntegrationTests: XCTestCase {
 
         // Observe connection states
         var connectionStates: [UUID: CBPeripheralState] = [:]
-        controller.connectionOutput
+        controller.$connectionStates
             .sink { states in
                 connectionStates = states
             }
@@ -108,6 +108,6 @@ class ComponentIntegrationTests: XCTestCase {
 
         // Test clear
         controller.scanInput.send(.clear)
-        XCTAssertTrue(controller.peripheralsOutput.value.isEmpty)
+        XCTAssertTrue(controller.discoveredPeripherals.isEmpty)
     }
 }

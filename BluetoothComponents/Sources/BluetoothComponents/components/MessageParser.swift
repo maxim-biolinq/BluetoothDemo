@@ -78,6 +78,13 @@ public class MessageParser {
 public enum ParsedMessage {
     case infoResponse(InfoResponseData, seqNum: UInt32)
     case statusEvent(String, seqNum: UInt32)
+
+    public var seqNum: UInt32 {
+        switch self {
+        case .infoResponse(_, let seqNum), .statusEvent(_, let seqNum):
+            return seqNum
+        }
+    }
 }
 
 public enum ParsingError: Error {

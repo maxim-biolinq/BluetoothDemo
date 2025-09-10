@@ -24,12 +24,9 @@ public class PeripheralService: NSObject, ObservableObject {
     // MARK: - Private Properties
     private let peripheral: CBPeripheral
     private let messageParser = MessageParser()
+    private let commandService = CommandService()
     private var commandCharacteristic: CBCharacteristic?
     private var responseCharacteristic: CBCharacteristic?
-
-    // Request correlation
-    private var pendingRequests = [UInt32: PendingRequest]()
-    private var nextSeqNum: UInt32 = 1
 
     private var cancellables = Set<AnyCancellable>()
 
@@ -37,9 +34,32 @@ public class PeripheralService: NSObject, ObservableObject {
         self.peripheral = peripheral
         super.init()
 
+        // Wire command input to command service
         commandInput
             .sink { [weak self] command in
-                self?.handleCommand(command)
+                self?.commandService.commandInput.send(command)
+            }
+            .store(in: &cancellables)
+
+        // Wire command service outputs
+        commandService.$commandDataOutput
+            .compactMap { $0 }
+            .sink { [weak self] commandData in
+                self?.sendCommand(commandData)
+            }
+            .store(in: &cancellables)
+
+        commandService.$commandResponseOutput
+            .compactMap { $0 }
+            .sink { [weak self] response in
+                self?.commandResponseOutput.send(response)
+            }
+            .store(in: &cancellables)
+
+        commandService.$errorOutput
+            .compactMap { $0 }
+            .sink { [weak self] error in
+                self?.commandResponseOutput.send(.error(error))
             }
             .store(in: &cancellables)
 
@@ -48,57 +68,16 @@ public class PeripheralService: NSObject, ObservableObject {
         peripheral.discoverServices(nil)
     }
 
-    // MARK: - Input Handlers
+    // MARK: - Command Transmission
 
-    private func handleCommand(_ command: PeripheralCommand) {
-        switch command {
-        case .requestInfo:
-            requestInfo()
-        }
-    }
-
-    // MARK: - Command Implementations
-
-    private func requestInfo() {
-        // Clean up any timed-out requests before sending new one
-        cleanupTimedOutRequests()
-
+    private func sendCommand(_ commandData: CommandData) {
         guard let commandChar = commandCharacteristic else {
             commandResponseOutput.send(.error("Not ready: command characteristic not available"))
             return
         }
 
-        do {
-            let seqNum = nextSeqNum
-            nextSeqNum += 1
-
-            let bleMessage = constructInfoRequest(seqNum: seqNum)
-            let data = try bleMessage.serializedData()
-
-            print("PeripheralService: Sending info request (seq: \(seqNum)): \(data.map { String(format: "%02x", $0) }.joined(separator: " "))")
-
-            // Track pending request
-            pendingRequests[seqNum] = PendingRequest(command: .requestInfo, timestamp: Date())
-
-            peripheral.writeValue(data, for: commandChar, type: CBCharacteristicWriteType.withResponse)
-        } catch {
-            print("PeripheralService: Error serializing info request: \(error)")
-            commandResponseOutput.send(.error("Failed to serialize info request: \(error.localizedDescription)"))
-        }
-    }
-
-    private func constructInfoRequest(seqNum: UInt32) -> Iris_BLEMessage {
-        var bleMessage = Iris_BLEMessage()
-        bleMessage.seqNum = seqNum
-
-        var rxMessage = Iris_BLEMessageChRx()
-        var request = Iris_BLEMessageChRxRequest()
-        request.info = Iris_InfoRequest()
-
-        rxMessage.request = request
-        bleMessage.rxMsg = rxMessage
-
-        return bleMessage
+        print("PeripheralService: Sending command (seq: \(commandData.seqNum)): \(commandData.data.map { String(format: "%02x", $0) }.joined(separator: " "))")
+        peripheral.writeValue(commandData.data, for: commandChar, type: CBCharacteristicWriteType.withResponse)
     }
 
 
@@ -202,54 +181,15 @@ extension PeripheralService: CBPeripheralDelegate {
 extension PeripheralService {
 
     private func handleReceivedData(_ data: Data) {
-        // Clean up any timed-out requests when receiving data
-        cleanupTimedOutRequests()
-
         let parseResult = messageParser.parse(data)
 
         switch parseResult {
         case .success(let message):
-            handleParsedMessage(message)
+            // Forward parsed message to command service for correlation
+            commandService.responseInput.send(message)
         case .failure(let error):
             print("PeripheralService: Parsing error: \(error.localizedDescription)")
             commandResponseOutput.send(.error("Failed to parse response: \(error.localizedDescription)"))
-        }
-    }
-
-    private func handleParsedMessage(_ message: ParsedMessage) {
-        switch message {
-        case .infoResponse(let infoData, let seqNum):
-            handleInfoResponse(infoData, seqNum: seqNum)
-        case .statusEvent(let status, let seqNum):
-            print("PeripheralService: Received status event (seq: \(seqNum)): \(status)")
-        }
-    }
-
-    private func handleInfoResponse(_ infoData: InfoResponseData, seqNum: UInt32) {
-        print("PeripheralService: InfoResponse (seq: \(seqNum)):")
-        print("  num_blocks: \(infoData.numBlocks)")
-        print("  timestamp: \(infoData.timestamp)")
-        print("  status: \(infoData.status)")
-
-        // Check if this matches a pending request
-        if let pendingRequest = pendingRequests.removeValue(forKey: seqNum) {
-            print("PeripheralService: Matched response to pending \(pendingRequest.command) request")
-            commandResponseOutput.send(.infoResponse(infoData))
-        } else {
-            print("PeripheralService: Warning - received response for unknown sequence number: \(seqNum)")
-        }
-    }
-
-    private func cleanupTimedOutRequests() {
-        let now = Date()
-        let timedOutRequests = pendingRequests.filter { (_, request) in
-            now.timeIntervalSince(request.timestamp) > PeripheralService.REQUEST_TIMEOUT
-        }
-
-        for (seqNum, request) in timedOutRequests {
-            print("PeripheralService: Request \(request.command) with seq \(seqNum) timed out")
-            pendingRequests.removeValue(forKey: seqNum)
-            commandResponseOutput.send(.error("Request timeout: \(request.command)"))
         }
     }}
 
@@ -294,14 +234,4 @@ public struct InfoResponseData {
         self.timestamp = timestamp
         self.status = status
     }
-}
-
-private struct PendingRequest {
-    let command: PeripheralCommand
-    let timestamp: Date
-}
-
-// MARK: - Configuration
-private extension PeripheralService {
-    static let REQUEST_TIMEOUT: TimeInterval = 30.0 // 30 seconds
 }
