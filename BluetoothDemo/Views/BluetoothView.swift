@@ -6,33 +6,36 @@ import Combine
 import BluetoothComponents
 
 // MARK: - Main View Component
-// Orchestrates the modular components by wiring inputs to outputs
 struct BluetoothView: View {
-    @StateObject private var viewModel = BluetoothViewModel()
+    @StateObject private var session = BluetoothSession()
+    @State private var filterText = ""
 
     var body: some View {
         VStack {
-            TextField("Enter prefix", text: $viewModel.filterText)
+            TextField("Enter prefix", text: $filterText)
+                .onChange(of: filterText) {
+                    session.setFilter(text: filterText)
+                }
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .padding()
 
             HStack {
                 Button("Start Scanning") {
-                    viewModel.startScanning()
+                    session.startScanning()
                 }
                 .padding()
                 .background(Color.blue)
                 .foregroundColor(.white)
 
                 Button("Clear & Stop") {
-                    viewModel.stopAndClear()
-                }
+                    session.stopScanning()
+                    session.clearPeripherals()                }
                 .padding()
                 .background(Color.red)
                 .foregroundColor(.white)
 
                 Button("Get Info") {
-                    viewModel.requestDeviceInfo()
+                    session.requestDeviceInfo()
                 }
                 .padding()
                 .background(Color.green)
@@ -40,7 +43,7 @@ struct BluetoothView: View {
             }
 
             // Info Response Display
-            if let info = viewModel.lastInfoResponse {
+            if let info = session.lastInfoResponse {
                 VStack(alignment: .leading) {
                     Text("Device Info:")
                         .font(.headline)
@@ -54,12 +57,12 @@ struct BluetoothView: View {
                 .cornerRadius(8)
             }
 
-            List(viewModel.filteredPeripherals, id: \.identifier) { peripheral in
+            List(session.filteredPeripherals, id: \.identifier) { peripheral in
                 PeripheralRow(
                     peripheral: peripheral,
-                    connectionState: viewModel.connectionStates[peripheral.identifier] ?? .disconnected,
+                    connectionState: session.connectionStates[peripheral.identifier] ?? .disconnected,
                     onConnect: { shouldConnect in
-                        viewModel.connect(peripheral: peripheral)
+                        session.connect(peripheral: peripheral)
                     }
                 )
             }

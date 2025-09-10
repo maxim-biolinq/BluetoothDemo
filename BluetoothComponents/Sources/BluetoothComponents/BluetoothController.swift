@@ -36,7 +36,7 @@ public class BluetoothController: NSObject, ObservableObject, CBCentralManagerDe
     public override init() {
         super.init()
         centralManager = CBCentralManager(delegate: self, queue: .main, options: [
-            CBCentralManagerOptionRestoreIdentifierKey: "com.yourcompany.yourapp.bluetooth",
+            CBCentralManagerOptionRestoreIdentifierKey: "com.biolinq.gemini.bluetooth",
             CBCentralManagerOptionShowPowerAlertKey: true
         ])
 
@@ -111,11 +111,11 @@ public class BluetoothController: NSObject, ObservableObject, CBCentralManagerDe
             connectedPeripheral = nil
         }
 
-        // Auto-reconnect
-        centralManager.connect(peripheral, options: [
-            CBConnectPeripheralOptionNotifyOnConnectionKey: true,
-            CBConnectPeripheralOptionNotifyOnDisconnectionKey: true
-        ])
+//        // Auto-reconnect
+//        centralManager.connect(peripheral, options: [
+//            CBConnectPeripheralOptionNotifyOnConnectionKey: true,
+//            CBConnectPeripheralOptionNotifyOnDisconnectionKey: true
+//        ])
     }
 
     public func centralManager(_ central: CBCentralManager, willRestoreState dict: [String : Any]) {

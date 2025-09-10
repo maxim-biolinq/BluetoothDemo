@@ -265,10 +265,23 @@ extension PeripheralService {
 
 // MARK: - Public Data Types
 
-public enum ServiceState {
+public enum ServiceState: Equatable {
     case discovering
     case ready(commandCharacteristic: CBCharacteristic, responseCharacteristic: CBCharacteristic)
     case error(String)
+
+    public static func == (lhs: ServiceState, rhs: ServiceState) -> Bool {
+        switch (lhs, rhs) {
+        case (.discovering, .discovering):
+            return true
+        case let (.ready(lhsCmd, lhsResp), .ready(rhsCmd, rhsResp)):
+            return lhsCmd.uuid == rhsCmd.uuid && lhsResp.uuid == rhsResp.uuid
+        case let (.error(lhsMsg), .error(rhsMsg)):
+            return lhsMsg == rhsMsg
+        default:
+            return false
+        }
+    }
 }
 
 public enum PeripheralCommand {
