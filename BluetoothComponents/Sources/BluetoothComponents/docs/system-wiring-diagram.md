@@ -1,104 +1,164 @@
-# System Wiring Diagram
+# Bluetooth System Architecture
 
-This diagram shows how all components are composed together into a working Bluetooth scanning system.
+This document describes the current Bluetooth component architecture and how components are wired together.
 
-## Complete System Architecture
+## Current System Components
 
 ```mermaid
 graph TD
     %% External Inputs
-    UT[User Text Input]
-    UB1[User Button: Start]
+    UT[User Search Text]
+    UB1[User Button: Start Scan]
     UB2[User Button: Stop/Clear]
+    UB3[User Button: Connect]
+    UB4[User Button: Get Info]
 
-    %% Components
-    subgraph "BluetoothScanner"
-        BSI[scanInput]
-        BSO[peripheralsOutput]
+    %% Main Components
+    subgraph "BluetoothController"
+        BSI[scanInput: PassthroughSubject]
+        BCI[connectionInput: PassthroughSubject]
+        BSO[discoveredPeripherals: @Published]
+        BCO[connectionStates: @Published]
+        BCP[connectedPeripheral: @Published]
     end
 
     subgraph "PeripheralFilter"
-        PFI1[peripheralsInput]
-        PFI2[filterTextInput]
-        PFO[peripheralsOutput]
+        PFI1[peripheralsInput: PassthroughSubject]
+        PFI2[filterTextInput: CurrentValueSubject]
+        PFO[filteredPeripherals: @Published]
     end
 
-    subgraph "BluetoothConnector"
-        BCI[connectionInput]
-        BCO[connectionOutput]
+    subgraph "BluetoothSession (when connected)"
+        BSS[BluetoothSession]
+        PS[PeripheralService]
     end
 
-    subgraph "PeripheralRow Views"
-        PRI1[peripheral props]
-        PRI2[connectionState props]
-        PRO[onConnect callbacks]
-    end
-
-    subgraph "BluetoothView Orchestrator"
-        BV[View Logic & Wiring]
+    subgraph "BluetoothView"
+        BV[View Logic & State]
     end
 
     %% User Input Wiring
-    UT --> |send| PFI2
+    UT --> |TextField binding| PFI2
     UB1 --> |send .start| BSI
     UB2 --> |send .stop/.clear| BSI
+    UB3 --> |send .connect| BCI
+    UB4 --> |via BluetoothSession| PS
 
-    %% Component Output to Input Wiring
-    BSO --> |onReceive -> send| PFI1
-    PFO --> |Published binding| PRI1
-    BCO --> |Published binding| PRI2
-    PRO --> |callback -> send| BCI
-
-    %% Shared Resources
-    BSI -.-> |shares centralManager| BCI
+    %% Component Wiring
+    BSO --> |"onReceive -> send"| PFI1
+    PFO --> |"@Published binding"| BV
+    BCO --> |"@Published binding"| BV
+    BCP --> |"creates when connected"| BSS
 
     %% Data Flow Labels
     BSO -.- |"[CBPeripheral]"| PFI1
-    PFO -.- |"[CBPeripheral] filtered"| PRI1
-    BCO -.- |"[UUID: CBPeripheralState]"| PRI2
-    PRO -.- |"ConnectionRequest"| BCI
+    PFO -.- |"[CBPeripheral] filtered"| BV
+    BCO -.- |"[UUID: CBPeripheralState]"| BV
+    BCP -.- |"CBPeripheral?"| BSS
 
     %% Styling
     classDef userInput fill:#fff3e0
     classDef component fill:#e1f5fe
     classDef input fill:#f3e5f5
     classDef output fill:#e8f5e8
-    classDef orchestrator fill:#fce4ec
+    classDef view fill:#fce4ec
 
-    class UT,UB1,UB2 userInput
-    class BSI,PFI1,PFI2,BCI,PRI1,PRI2 input
-    class BSO,PFO,BCO,PRO output
-    class BV orchestrator
+    class UT,UB1,UB2,UB3,UB4 userInput
+    class BSI,BCI,PFI1,PFI2 input
+    class BSO,BCO,BCP,PFO output
+    class BV view
 ```
 
-## Wiring Summary
+## Component Architecture
 
-### Data Flow Paths:
+### BluetoothController
+*Unified Bluetooth management component*
 
-1. **User Text Input → Filter**
-   - `TextField` binding → `PeripheralFilter.filterTextInput.send()`
+**Inputs:**
+- `scanInput: PassthroughSubject<ScanCommand, Never>`
+- `connectionInput: PassthroughSubject<ConnectionRequest, Never>`
 
-2. **User Buttons → Scanner**
-   - Button actions → `BluetoothScanner.scanInput.send(.start/.stop/.clear)`
+**Outputs:**
+- `discoveredPeripherals: @Published [CBPeripheral]`
+- `connectionStates: @Published [UUID: CBPeripheralState]`
+- `connectedPeripheral: @Published CBPeripheral?`
 
-3. **Scanner → Filter**
-   - `BluetoothScanner.peripheralsOutput` → `PeripheralFilter.peripheralsInput.send()`
+**Responsibilities:**
+- Device scanning and discovery
+- Connection management
+- Bluetooth state handling
+- Central Manager operations
 
-4. **Filter → UI**
-   - `PeripheralFilter.filteredPeripherals` → `PeripheralRow` props via `@Published`
+### PeripheralFilter
+*Device filtering and search*
 
-5. **Connector → UI**
-   - `BluetoothConnector.connectionStates` → `PeripheralRow.connectionState` via `@Published`
+**Inputs:**
+- `peripheralsInput: PassthroughSubject<[CBPeripheral], Never>`
+- `filterTextInput: CurrentValueSubject<String, Never>`
 
-6. **UI → Connector**
-   - `PeripheralRow.onConnect` callback → `BluetoothConnector.connectionInput.send()`
+**Outputs:**
+- `filteredPeripherals: @Published [CBPeripheral]`
 
-### Key Architectural Features:
+**Responsibilities:**
+- Real-time peripheral filtering
+- Search functionality
+- List processing
 
-- **Pure Input/Output**: Each component exposes only input subjects and output publishers
-- **Reactive Composition**: Components are wired using Combine publishers and SwiftUI bindings
-- **Shared Resources**: Scanner and Connector share the same `CBCentralManager` instance
-- **Unidirectional Data Flow**: Clear flow from user actions through components to UI updates
-- **Encapsulation**: All internal logic is private; only input/output ports are exposed
+### BluetoothSession & PeripheralService
+*Connection-scoped communication*
 
-This architecture follows Unix philosophy principles where complex behavior emerges from simple components connected through well-defined interfaces.
+**BluetoothSession:**
+- Created when a peripheral connects
+- Manages the PeripheralService lifecycle
+- Provides high-level communication interface
+
+**PeripheralService:**
+- Initialized with connected peripheral
+- Handles service discovery automatically
+- Manages BLE communication protocol
+- Processes commands and responses
+
+## Data Flow Sequence
+
+### 1. Discovery Phase
+```
+User Action → BluetoothController → PeripheralFilter → UI
+"Start Scan" → scanInput → discoveredPeripherals → peripheralsInput → filteredPeripherals → View
+```
+
+### 2. Connection Phase
+```
+User Selection → BluetoothController → BluetoothSession
+"Connect" → connectionInput → connectedPeripheral → BluetoothSession.init()
+```
+
+### 3. Communication Phase
+```
+User Request → BluetoothSession → PeripheralService → Device
+"Get Info" → session.requestInfo() → service.sendCommand() → BLE Response
+```
+
+## Key Design Principles
+
+### Simple
+- Single BluetoothController handles all core Bluetooth operations
+- Clear separation between discovery, connection, and communication
+- Minimal abstractions that map directly to functionality
+
+### Testable
+- Pure input/output interfaces using Combine
+- No public methods - only reactive data flow
+- Clear component boundaries enable isolated testing
+
+### Modular
+- Components can be used independently
+- Connection-scoped services (BluetoothSession/PeripheralService)
+- Composable through reactive wiring
+
+### Architecture Benefits
+
+1. **Unified Management**: Single controller for all Bluetooth operations
+2. **Connection Lifecycle**: Services created/destroyed with connections
+3. **Memory Efficient**: No persistent state between connections
+4. **Error Recovery**: Connection failures automatically clean up
+5. **Future Extensible**: Easy to add new communication patterns

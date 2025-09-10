@@ -1,104 +1,86 @@
-# Connection Lifecycle Diagram
+# Connection Lifecycle
 
-## System Connection Behavior
+This document describes the Bluetooth connection lifecycle and session management patterns.
 
-This diagram shows the connection lifecycle patterns for the Bluetooth system, including current behavior and future evolution.
+## Current Connection Flow
 
 ```mermaid
 sequenceDiagram
-    participant App as App
+    participant UI as BluetoothView
     participant BC as BluetoothController
-    participant VM as ViewModel
+    participant BS as BluetoothSession
     participant PS as PeripheralService
     participant Device as BLE Device
 
-    Note over App,Device: Current: Periodic Connect/Disconnect Pattern (Every 5 minutes)
-
-    App->>BC: Start Scan
-    BC->>Device: Discover
+    Note over UI,Device: Discovery Phase
+    UI->>BC: scanInput.send(.start)
+    BC->>Device: Start Scanning
     Device->>BC: Advertisement
-    BC->>VM: discoveredPeripherals updated
+    BC->>UI: discoveredPeripherals updated
 
-    App->>BC: Connect Request
-    BC->>Device: Connect
-    Device->>BC: Connected
-    BC->>VM: connectedPeripheral = peripheral
+    Note over UI,Device: Connection Phase
+    UI->>BC: connectionInput.send(.connect(peripheral))
+    BC->>Device: Connect Request
+    Device->>BC: Connection Established
+    BC->>UI: connectedPeripheral = peripheral
 
-    Note over VM,PS: Service Creation & Lifecycle
-    VM->>PS: new PeripheralService(peripheral)
+    Note over UI,Device: Session Creation
+    UI->>BS: BluetoothSession(controller, peripheral)
+    BS->>PS: PeripheralService(peripheral)
     PS->>Device: Discover Services
-    Device->>PS: Services/Characteristics
-    PS->>VM: serviceState = .ready
+    Device->>PS: Services Available
+    PS->>Device: Discover Characteristics
+    Device->>PS: Characteristics Available
+    PS->>BS: Service Ready
 
-    Note over App,Device: Data Download Phase
-    App->>PS: Request Info
-    PS->>Device: Send Command
-    Device->>PS: Response Data
-    PS->>VM: commandResponse
-    VM->>App: Display Data
+    Note over UI,Device: Communication Phase
+    UI->>BS: requestInfo()
+    BS->>PS: Send Info Request
+    PS->>Device: Write Command
+    Device->>PS: Notify Response
+    PS->>BS: Parse Response Data
+    BS->>UI: Return InfoData
 
-    Note over BC,Device: Automatic Disconnect (Current Pattern)
+    Note over UI,Device: Disconnection
+    UI->>BC: connectionInput.send(.disconnect)
     BC->>Device: Disconnect
     Device->>BC: Disconnected
-    BC->>VM: connectedPeripheral = nil
-    VM->>PS: peripheralService = nil
-    Note over PS: Service Destroyed & Memory Freed
-
-    Note over App,Device: 5-Minute Wait Cycle
-
-    Note over App,Device: Future: Always-Connected Pattern
-    rect rgb(240, 248, 255)
-        Note over VM,PS: Service Persists for Session
-        App->>PS: Continuous Requests
-        PS->>Device: Ongoing Communication
-        Device->>PS: Real-time Responses
-    end
-
-    Note over App,Device: NFC Tap Pattern (User-Initiated)
-    rect rgb(255, 248, 220)
-        Note over Device: NFC Tap → Wake & Start Advertising
-        App->>BC: Automatic Scan (on tap detection)
-        BC->>Device: Discover (now advertising)
-        Device->>BC: Advertisement Response
-        Note over App,Device: Standard Connection Flow Follows
-        BC->>Device: Connect
-        VM->>PS: new PeripheralService(peripheral)
-        PS->>Device: Service Discovery & Communication
-        Note over App,Device: Data Exchange Complete → Disconnect
-    end
+    BC->>UI: connectedPeripheral = nil
+    Note over BS,PS: Session & Service Destroyed
 ```
 
-## Key Lifecycle Characteristics
+## Connection Lifecycle Characteristics
 
-### Current Pattern (Periodic Cycles)
-- **Connection Duration**: Short-lived (seconds to minutes)
-- **Frequency**: Every 5 minutes or more often
-- **Purpose**: Connect → Download → Disconnect
-- **Service Lifecycle**: Created per connection, destroyed on disconnect
+### Service Creation Pattern
+- **Timing**: Services created only when peripheral connects
+- **Scope**: Services bound to specific peripheral connection
+- **Memory**: Automatically cleaned up on disconnect
+- **Discovery**: Service/characteristic discovery happens immediately on creation
 
-### Future Pattern (Always-Connected)
-- **Connection Duration**: Long-lived (hours to session)
-- **Frequency**: Single connection per session
-- **Purpose**: Continuous communication
-- **Service Lifecycle**: Created once, persists for session
+### Session Management
+- **BluetoothSession**: High-level interface created per connection
+- **PeripheralService**: Low-level BLE communication handler
+- **Lifecycle**: Both destroyed when connection ends
+- **State**: Each connection gets fresh service state
 
-### NFC Tap Pattern (User-Initiated)
-- **Connection Duration**: Short-lived (triggered by user action)
-- **Frequency**: On-demand via NFC tap
-- **Purpose**: Wake device → Connect → Download → Disconnect
-- **Service Lifecycle**: Created per tap event, destroyed after data exchange
+## Key Architecture Benefits
 
-## Architecture Alignment
+### Memory Efficiency
+- No persistent objects between connections
+- Services destroyed automatically on disconnect
+- Clean slate for each new connection
 
-### Perfect Match with Initialization Design
-1. **Service Creation**: Tied to connection establishment
-2. **Automatic Discovery**: Starts immediately upon connection
-3. **Memory Management**: Service cleaned up on disconnect
-4. **State Isolation**: Each connection gets fresh service state
-5. **Future Compatibility**: Works for both patterns seamlessly
+### Error Recovery
+- Connection failures automatically clean up service state
+- No lingering state from failed connections
+- Robust reconnection handling
 
-### Benefits
-- **Periodic Pattern**: Clean slate for each connection cycle
-- **Always-Connected**: Single service instance for persistent connection
-- **Memory Efficient**: No persistent objects between connections
-- **Error Recovery**: Connection failures automatically clean up service state
+### Simplicity
+- Service creation tied directly to connection success
+- Automatic discovery eliminates manual setup
+- Clear lifecycle boundaries
+
+### Future Extensibility
+- Pattern works for both short-lived and persistent connections
+- Easy to add connection-scoped features
+- Maintains clean separation of concerns
