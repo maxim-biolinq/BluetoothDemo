@@ -25,8 +25,8 @@ public class BluetoothSession: ObservableObject {
     @Published public var isMultiBlockRequestActive = false
 
     // MARK: - Components
-    private let controller = BluetoothController()
-    private let filter = PeripheralFilter()
+    private let controller: BluetoothController!
+    private let filter: PeripheralFilter!
     private var peripheralService: PeripheralService?
 
     // MARK: - Private Properties
@@ -34,7 +34,12 @@ public class BluetoothSession: ObservableObject {
     private var pendingMultiBlockRequest: [UInt32] = [] // ordered list of expected block numbers
     private var receivedBlocks: [UInt32: Data] = [:]
 
-    public init() {
+    public init(
+    controller: BluetoothController = BluetoothController(),
+    filter: PeripheralFilter = PeripheralFilter()
+    ) {
+        self.controller = controller
+        self.filter = filter
         setupWiring()
     }
 
