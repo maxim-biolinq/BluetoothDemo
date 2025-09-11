@@ -1,14 +1,11 @@
 import Foundation
 import SwiftProtobuf
 
-// MARK: - Message Parser Component
-// Input: raw BLE data
-// Output: parsed message results
-public class MessageParser {
+// MARK: - Message Parser Utility
+// Static utility for parsing BLE data
+public struct MessageParser {
 
-    public init() {}
-
-    public func parse(_ data: Data) -> Result<ParsedMessage, ParsingError> {
+    public static func parse(_ data: Data) -> Result<ParsedMessage, ParsingError> {
         do {
             let bleMessage = try Iris_BLEMessage(serializedBytes: data)
             return parseMessage(bleMessage)
@@ -19,7 +16,7 @@ public class MessageParser {
 
     // MARK: - Private Parsing Logic
 
-    private func parseMessage(_ bleMessage: Iris_BLEMessage) -> Result<ParsedMessage, ParsingError> {
+    private static func parseMessage(_ bleMessage: Iris_BLEMessage) -> Result<ParsedMessage, ParsingError> {
         let seqNum = bleMessage.seqNum
 
         // Check which message type is present using the new flat structure
@@ -48,7 +45,7 @@ public class MessageParser {
         }
     }
 
-    private func statusToString(_ status: Iris_Status) -> String {
+    private static func statusToString(_ status: Iris_Status) -> String {
         switch status {
         case .unspecified:
             return "unspecified"

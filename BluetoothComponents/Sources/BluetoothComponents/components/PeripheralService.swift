@@ -20,12 +20,9 @@ public class PeripheralService: NSObject, ObservableObject {
 
     public let serviceStateOutput = CurrentValueSubject<ServiceState, Never>(.discovering)
     public let commandResponseOutput = PassthroughSubject<CommandResponse, Never>()
-    public let commandDataOutput = PassthroughSubject<CommandData, Never>()
-    public let parsedMessageOutput = PassthroughSubject<ParsedMessage, Never>()
 
     // MARK: - Private Properties
     private let peripheral: CBPeripheral
-    private let messageParser = MessageParser()
     private let commandService = CommandService()
     private var commandCharacteristic: CBCharacteristic?
     private var responseCharacteristic: CBCharacteristic?
@@ -36,39 +33,35 @@ public class PeripheralService: NSObject, ObservableObject {
         self.peripheral = peripheral
         super.init()
 
-        // Wire command input to command service
+        // Wire command input
         commandInput
             .sink { [weak self] command in
-                self?.commandService.commandInput.send(command)
-            }
-            .store(in: &cancellables)
-
-        // Wire command service outputs
-        commandService.$commandDataOutput
-            .compactMap { $0 }
-            .sink { [weak self] commandData in
-                self?.commandDataOutput.send(commandData)
-                self?.sendCommand(commandData)
-            }
-            .store(in: &cancellables)
-
-        commandService.$commandResponseOutput
-            .compactMap { $0 }
-            .sink { [weak self] response in
-                self?.commandResponseOutput.send(response)
-            }
-            .store(in: &cancellables)
-
-        commandService.$errorOutput
-            .compactMap { $0 }
-            .sink { [weak self] error in
-                self?.commandResponseOutput.send(.error(error))
+                self?.handleCommand(command)
             }
             .store(in: &cancellables)
 
         // Start service discovery immediately
         peripheral.delegate = self
         peripheral.discoverServices(nil)
+    }
+
+    // MARK: - Command Processing
+
+    private func handleCommand(_ command: PeripheralCommand) {
+        let result = commandService.processCommand(command)
+
+        switch result {
+        case .success(let commandData):
+            sendCommand(commandData)
+        case .failure(let error):
+            commandResponseOutput.send(.error("Failed to process command: \(error.localizedDescription)"))
+        }
+
+        // Also check for any timeout errors
+        let timeoutErrors = commandService.getTimeoutErrors()
+        for errorResponse in timeoutErrors {
+            commandResponseOutput.send(errorResponse)
+        }
     }
 
     // MARK: - Command Transmission
@@ -184,14 +177,14 @@ extension PeripheralService: CBPeripheralDelegate {
 extension PeripheralService {
 
     private func handleReceivedData(_ data: Data) {
-        let parseResult = messageParser.parse(data)
+        let parseResult = MessageParser.parse(data)
 
         switch parseResult {
         case .success(let message):
             // Forward parsed message to command service for correlation
-            commandService.responseInput.send(message)
-            // Also send to our output for sequence number correlation
-            parsedMessageOutput.send(message)
+            if let response = commandService.handleResponse(message) {
+                commandResponseOutput.send(response)
+            }
         case .failure(let error):
             print("PeripheralService: Parsing error: \(error.localizedDescription)")
             commandResponseOutput.send(.error("Failed to parse response: \(error.localizedDescription)"))

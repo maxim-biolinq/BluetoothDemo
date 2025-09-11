@@ -2,46 +2,23 @@
 
 import Foundation
 import CoreBluetooth
-import Combine
 import SwiftProtobuf
 
-// MARK: - Command Service Component
-// Input: command requests and parsed responses
-// Output: serialized commands and correlated responses
+// MARK: - Command Service
+// Internal service for request/response correlation and command sequencing
 // Lifecycle: Created per peripheral connection
-public class CommandService: ObservableObject {
-
-    // MARK: - Inputs/Outputs
-    public let commandInput = PassthroughSubject<PeripheralCommand, Never>()
-    public let responseInput = PassthroughSubject<ParsedMessage, Never>()
-
-    @Published public var commandDataOutput: CommandData?
-    @Published public var commandResponseOutput: CommandResponse?
-    @Published public var errorOutput: String?
+public class CommandService {
 
     // MARK: - Private Properties
     private var pendingRequests = [UInt32: PendingRequest]()
     private var nextSeqNum: UInt32 = 1
-    private var cancellables = Set<AnyCancellable>()
 
-    public init() {
-        commandInput
-            .sink { [weak self] command in
-                self?.handleCommand(command)
-            }
-            .store(in: &cancellables)
+    public init() {}
 
-        responseInput
-            .sink { [weak self] message in
-                self?.handleResponse(message)
-            }
-            .store(in: &cancellables)
-    }
+    // MARK: - Public Interface
 
-    // MARK: - Command Handling
-
-    private func handleCommand(_ command: PeripheralCommand) {
-        cleanupTimedOutRequests()
+    public func processCommand(_ command: PeripheralCommand) -> Result<CommandData, Error> {
+        _ = cleanupTimedOutRequests()
 
         do {
             let seqNum = nextSeqNum
@@ -49,53 +26,64 @@ public class CommandService: ObservableObject {
 
             let commandData = try command.data(seqNum: seqNum)
             pendingRequests[seqNum] = PendingRequest(command: command, timestamp: Date())
-            commandDataOutput = commandData
-
+            return .success(commandData)
         } catch {
             print("CommandService: Error processing command \(command): \(error)")
-            errorOutput = "Failed to process command: \(error.localizedDescription)"
+            return .failure(error)
         }
     }
 
-    // MARK: - Response Handling
-
-    private func handleResponse(_ message: ParsedMessage) {
-        cleanupTimedOutRequests()
-
-        // Let the ParsedMessage extension handle the response parsing
-        if let response = message.response {
-            // Check if this matches a pending request
-            if let _ = pendingRequests.removeValue(forKey: message.seqNum) {
-                commandResponseOutput = response
-            } else if message.seqNum == 0 && !pendingRequests.isEmpty {
-                // Some devices always respond with sequence 0 - match to oldest pending request
-                if let oldestSeqNum = pendingRequests.keys.min() {
-                    pendingRequests.removeValue(forKey: oldestSeqNum)
-                    commandResponseOutput = response
-                    print("CommandService: Matched seq 0 response to pending request \(oldestSeqNum)")
-                }
-            } else {
-                print("CommandService: Warning - response for unknown sequence: \(message.seqNum)")
-            }
-        }
+    public func handleResponse(_ message: ParsedMessage) -> CommandResponse? {
+        _ = cleanupTimedOutRequests()
 
         // Handle status events (don't correlate to requests)
         if case .statusEvent(let status, let seqNum) = message {
             print("CommandService: Status event (seq: \(seqNum)): \(status)")
+            return nil // Status events are not correlated to commands
         }
+
+        // Get the CommandResponse from the ParsedMessage
+        guard let response = message.response else {
+            return nil
+        }
+
+        let seqNum = message.seqNum
+
+        // Check if this matches a pending request
+        if let _ = pendingRequests.removeValue(forKey: seqNum) {
+            print("CommandService: Correlated response for seq \(seqNum)")
+            return response
+        } else if seqNum == 0 && !pendingRequests.isEmpty {
+            // Some devices always respond with sequence 0 - match to oldest pending request
+            if let oldestSeqNum = pendingRequests.keys.min() {
+                pendingRequests.removeValue(forKey: oldestSeqNum)
+                print("CommandService: Matched seq 0 response to pending request \(oldestSeqNum)")
+                return response
+            }
+        }
+
+        print("CommandService: Warning - response for unknown sequence: \(seqNum)")
+        return nil
     }
 
-    private func cleanupTimedOutRequests() {
+    public func getTimeoutErrors() -> [CommandResponse] {
+        let timeouts = cleanupTimedOutRequests()
+        return timeouts
+    }
+
+    private func cleanupTimedOutRequests() -> [CommandResponse] {
         let now = Date()
         let timedOutRequests = pendingRequests.filter { (_, request) in
             now.timeIntervalSince(request.timestamp) > CommandService.REQUEST_TIMEOUT
         }
 
+        var timeoutErrors: [CommandResponse] = []
         for (seqNum, request) in timedOutRequests {
             print("CommandService: Request \(request.command) with seq \(seqNum) timed out")
             pendingRequests.removeValue(forKey: seqNum)
-            errorOutput = "Request timeout: \(request.command)"
+            timeoutErrors.append(.error("Request timeout: \(request.command)"))
         }
+        return timeoutErrors
     }
 }
 
