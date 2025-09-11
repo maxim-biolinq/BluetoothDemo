@@ -65,8 +65,15 @@ public class CommandService: ObservableObject {
         // Let the ParsedMessage extension handle the response parsing
         if let response = message.response {
             // Check if this matches a pending request
-            if pendingRequests.removeValue(forKey: message.seqNum) != nil {
+            if let _ = pendingRequests.removeValue(forKey: message.seqNum) {
                 commandResponseOutput = response
+            } else if message.seqNum == 0 && !pendingRequests.isEmpty {
+                // Some devices always respond with sequence 0 - match to oldest pending request
+                if let oldestSeqNum = pendingRequests.keys.min() {
+                    pendingRequests.removeValue(forKey: oldestSeqNum)
+                    commandResponseOutput = response
+                    print("CommandService: Matched seq 0 response to pending request \(oldestSeqNum)")
+                }
             } else {
                 print("CommandService: Warning - response for unknown sequence: \(message.seqNum)")
             }
