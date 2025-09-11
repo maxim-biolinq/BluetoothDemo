@@ -76,8 +76,11 @@ public class BluetoothSession: ObservableObject {
         // Clear previous state
         pendingMultiBlockRequest = blockNums.sorted()
         receivedBlocks.removeAll()
-        multiBlockEDataResults.removeAll()
-        isMultiBlockRequestActive = true
+
+        DispatchQueue.main.async {
+            self.multiBlockEDataResults.removeAll()
+            self.isMultiBlockRequestActive = true
+        }
 
         // Send all requests - the CommandService will handle sequence numbers and correlation
         for blockNum in blockNums {
@@ -123,11 +126,14 @@ public class BluetoothSession: ObservableObject {
     private func handlePeripheralConnection(_ peripheral: CBPeripheral?) {
         // Clean up existing service and multi-block state
         peripheralService = nil
-        serviceState = .discovering
-        pendingMultiBlockRequest.removeAll()
-        receivedBlocks.removeAll()
-        multiBlockEDataResults.removeAll()
-        isMultiBlockRequestActive = false
+
+        DispatchQueue.main.async {
+            self.serviceState = .discovering
+            self.pendingMultiBlockRequest.removeAll()
+            self.receivedBlocks.removeAll()
+            self.multiBlockEDataResults.removeAll()
+            self.isMultiBlockRequestActive = false
+        }
 
         if let peripheral = peripheral {
             // Create new service for this peripheral
@@ -174,13 +180,15 @@ public class BluetoothSession: ObservableObject {
             let expectedBlockNum = pendingMultiBlockRequest.removeFirst()
             receivedBlocks[expectedBlockNum] = data.blockData
 
-            // Add to results in order
-            multiBlockEDataResults.append((blockNum: expectedBlockNum, data: data.blockData))
+            DispatchQueue.main.async {
+                // Add to results in order
+                self.multiBlockEDataResults.append((blockNum: expectedBlockNum, data: data.blockData))
 
-            // Check if all blocks received
-            if pendingMultiBlockRequest.isEmpty {
-                isMultiBlockRequestActive = false
-                print("BluetoothSession: Multi-block request completed. Received \(multiBlockEDataResults.count) blocks.")
+                // Check if all blocks received
+                if self.pendingMultiBlockRequest.isEmpty {
+                    self.isMultiBlockRequestActive = false
+                    print("BluetoothSession: Multi-block request completed. Received \(self.multiBlockEDataResults.count) blocks.")
+                }
             }
         }
     }
