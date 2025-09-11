@@ -193,3 +193,12 @@ User Request → BluetoothSession → PeripheralService → Device
 3. **Memory Efficient**: No persistent state between connections
 4. **Error Recovery**: Connection failures automatically clean up
 5. **Future Extensible**: Easy to add new communication patterns
+
+## Message Handling Assumptions
+
+This architecture relies on the guarantees provided by the underlying reactive framework (currently Combine).
+In the local app context, message delivery is reliable and synchronous/asynchronous behavior is handled by
+the framework.
+
+Components should handle errors within their boundaries but don't need to worry about message transport
+reliability in this implementation.
