@@ -11,13 +11,7 @@ public class MessageParser {
     public func parse(_ data: Data) -> Result<ParsedMessage, ParsingError> {
         do {
             let bleMessage = try Iris_BLEMessage(serializedBytes: data)
-
-            // Check if this is a tx_msg channel
-            guard case .txMsg(let txMsg) = bleMessage.channel else {
-                return .failure(.unexpectedChannel)
-            }
-
-            return parseTxMessage(txMsg, seqNum: bleMessage.seqNum)
+            return parseMessage(bleMessage)
         } catch {
             return .failure(.deserializationFailed(error))
         }
@@ -25,40 +19,32 @@ public class MessageParser {
 
     // MARK: - Private Parsing Logic
 
-    private func parseTxMessage(_ txMsg: Iris_BLEMessageChTx, seqNum: UInt32) -> Result<ParsedMessage, ParsingError> {
-        switch txMsg.msg {
-        case .response(let response):
-            return parseTxResponse(response, seqNum: seqNum)
-        case .event(let event):
-            return parseTxEvent(event, seqNum: seqNum)
-        case .none:
-            return .failure(.emptyMessage)
-        }
-    }
+    private func parseMessage(_ bleMessage: Iris_BLEMessage) -> Result<ParsedMessage, ParsingError> {
+        let seqNum = bleMessage.seqNum
 
-    private func parseTxResponse(_ response: Iris_BLEMessageChTxResponse, seqNum: UInt32) -> Result<ParsedMessage, ParsingError> {
-        switch response.msg {
-        case .info(let info):
+        // Check which message type is present using the new flat structure
+        switch bleMessage.msg {
+        case .infoResponse(let info):
             let infoData = InfoResponseData(
                 numBlocks: info.numBlocks,
                 timestamp: info.timestamp,
                 status: statusToString(info.status)
             )
             return .success(.infoResponse(infoData, seqNum: seqNum))
-        case .eDataBlock(let eDataBlock):
+
+        case .eDataBlockResponse(let eDataBlock):
             let eDataBlockData = EDataBlockResponseData(blockData: eDataBlock.blockData)
             return .success(.eDataBlockResponse(eDataBlockData, seqNum: seqNum))
-        case .none:
-            return .failure(.emptyResponse)
-        }
-    }
 
-    private func parseTxEvent(_ event: Iris_BLEMessageChTxEvent, seqNum: UInt32) -> Result<ParsedMessage, ParsingError> {
-        switch event.msg {
-        case .status(let statusEvent):
+        case .statusEvent(let statusEvent):
             return .success(.statusEvent(statusToString(statusEvent.status), seqNum: seqNum))
+
         case .none:
-            return .failure(.emptyEvent)
+            return .failure(.emptyMessage)
+
+        // Ignore request and command messages (we only process responses and events)
+        case .infoRequest, .eDataBlockRequest, .startSensorCommand:
+            return .failure(.unexpectedMessage)
         }
     }
 
@@ -93,23 +79,17 @@ public enum ParsedMessage {
 
 public enum ParsingError: Error {
     case deserializationFailed(Error)
-    case unexpectedChannel
+    case unexpectedMessage
     case emptyMessage
-    case emptyResponse
-    case emptyEvent
 
     public var localizedDescription: String {
         switch self {
         case .deserializationFailed(let error):
             return "Failed to parse protobuf: \(error.localizedDescription)"
-        case .unexpectedChannel:
-            return "Received notification on unexpected channel"
+        case .unexpectedMessage:
+            return "Received unexpected message type"
         case .emptyMessage:
             return "Received message with no content"
-        case .emptyResponse:
-            return "Received response with no content"
-        case .emptyEvent:
-            return "Received event with no content"
         }
     }
 }

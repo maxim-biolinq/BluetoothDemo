@@ -21,13 +21,9 @@ public extension PeripheralCommand {
     private static func processInfoRequest(seqNum: UInt32) throws -> CommandData {
         var bleMessage = Iris_BLEMessage()
         bleMessage.seqNum = seqNum
-
-        var rxMessage = Iris_BLEMessageChRx()
-        var request = Iris_BLEMessageChRxRequest()
-        request.info = Iris_InfoRequest()
-
-        rxMessage.request = request
-        bleMessage.rxMsg = rxMessage
+        bleMessage.rspNum = 0  // placeholder
+        bleMessage.crc32 = 0   // placeholder
+        bleMessage.infoRequest = Iris_InfoRequest()
 
         let data = try bleMessage.serializedData()
         print("Commands: Prepared info request (seq: \(seqNum))")
@@ -40,15 +36,12 @@ public extension PeripheralCommand {
     private static func processEDataBlockRequest(blockNum: UInt32, seqNum: UInt32) throws -> CommandData {
         var bleMessage = Iris_BLEMessage()
         bleMessage.seqNum = seqNum
+        bleMessage.rspNum = 0  // placeholder
+        bleMessage.crc32 = 0   // placeholder
 
-        var rxMessage = Iris_BLEMessageChRx()
-        var request = Iris_BLEMessageChRxRequest()
         var eDataBlockRequest = Iris_EDataBlockRequest()
         eDataBlockRequest.blockNum = blockNum
-        request.eDataBlock = eDataBlockRequest
-
-        rxMessage.request = request
-        bleMessage.rxMsg = rxMessage
+        bleMessage.eDataBlockRequest = eDataBlockRequest
 
         let data = try bleMessage.serializedData()
         print("Commands: Prepared eDataBlock request for block \(blockNum) (seq: \(seqNum))")

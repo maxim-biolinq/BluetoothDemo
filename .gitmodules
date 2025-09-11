@@ -1,0 +1,3 @@
+[submodule "BluetoothComponents/Sources/BluetoothComponents/protobuf"]
+	path = BluetoothComponents/Sources/BluetoothComponents/protobuf
+	url = https://github.com/srozell-biolinq/iris-protobuf.git

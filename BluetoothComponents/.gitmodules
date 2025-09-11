@@ -1,0 +1,2 @@
+[submodule "Sources/BluetoothComponents/protobuf"]
+	branch = main
