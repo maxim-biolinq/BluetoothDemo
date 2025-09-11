@@ -20,6 +20,8 @@ public class PeripheralService: NSObject, ObservableObject {
 
     public let serviceStateOutput = CurrentValueSubject<ServiceState, Never>(.discovering)
     public let commandResponseOutput = PassthroughSubject<CommandResponse, Never>()
+    public let commandDataOutput = PassthroughSubject<CommandData, Never>()
+    public let parsedMessageOutput = PassthroughSubject<ParsedMessage, Never>()
 
     // MARK: - Private Properties
     private let peripheral: CBPeripheral
@@ -45,6 +47,7 @@ public class PeripheralService: NSObject, ObservableObject {
         commandService.$commandDataOutput
             .compactMap { $0 }
             .sink { [weak self] commandData in
+                self?.commandDataOutput.send(commandData)
                 self?.sendCommand(commandData)
             }
             .store(in: &cancellables)
@@ -187,6 +190,8 @@ extension PeripheralService {
         case .success(let message):
             // Forward parsed message to command service for correlation
             commandService.responseInput.send(message)
+            // Also send to our output for sequence number correlation
+            parsedMessageOutput.send(message)
         case .failure(let error):
             print("PeripheralService: Parsing error: \(error.localizedDescription)")
             commandResponseOutput.send(.error("Failed to parse response: \(error.localizedDescription)"))
@@ -216,11 +221,13 @@ public enum ServiceState: Equatable {
 
 public enum PeripheralCommand {
     case requestInfo
+    case getEData(blockNum: UInt32)
     // Future commands can be added here
 }
 
 public enum CommandResponse {
     case infoResponse(InfoResponseData)
+    case eDataBlockResponse(EDataBlockResponseData)
     case error(String)
 }
 
@@ -233,5 +240,13 @@ public struct InfoResponseData {
         self.numBlocks = numBlocks
         self.timestamp = timestamp
         self.status = status
+    }
+}
+
+public struct EDataBlockResponseData {
+    public let blockData: Data
+
+    public init(blockData: Data) {
+        self.blockData = blockData
     }
 }

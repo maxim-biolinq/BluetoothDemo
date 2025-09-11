@@ -40,6 +40,13 @@ struct BluetoothView: View {
                 .padding()
                 .background(Color.green)
                 .foregroundColor(.white)
+
+                Button("Get EData") {
+                    session.requestMultipleEDataBlocks(blockNums: [0, 1, 2])
+                }
+                .padding()
+                .background(Color.orange)
+                .foregroundColor(.white)
             }
 
             // Info Response Display
@@ -55,6 +62,39 @@ struct BluetoothView: View {
                 .padding()
                 .background(Color.gray.opacity(0.1))
                 .cornerRadius(8)
+            }
+
+            // Multi-Block EData Response Display
+            if !session.multiBlockEDataResults.isEmpty {
+                VStack(alignment: .leading) {
+                    Text("EData Blocks (0, 1, 2):")
+                        .font(.headline)
+                        .padding(.top)
+
+                    Text("Total Combined Length: \(session.combinedEDataBlocks.count) bytes")
+                    Text("Combined Preview: \(session.combinedEDataBlocks.prefix(32).map { String(format: "%02x", $0) }.joined(separator: " "))")
+                        .font(.system(.body, design: .monospaced))
+
+                    ForEach(session.multiBlockEDataResults, id: \.blockNum) { result in
+                        Text("Block \(result.blockNum): \(result.data.count) bytes - \(result.data.prefix(16).map { String(format: "%02x", $0) }.joined(separator: " "))")
+                            .font(.system(.caption, design: .monospaced))
+                    }
+                }
+                .padding()
+                .background(Color.blue.opacity(0.1))
+                .cornerRadius(8)
+            }
+
+            // Loading indicator for multi-block requests
+            if session.isMultiBlockRequestActive {
+                HStack {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                    Text("Requesting blocks 0, 1, 2...")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding()
             }
 
             List(session.filteredPeripherals, id: \.identifier) { peripheral in

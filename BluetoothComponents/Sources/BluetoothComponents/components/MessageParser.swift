@@ -45,6 +45,9 @@ public class MessageParser {
                 status: statusToString(info.status)
             )
             return .success(.infoResponse(infoData, seqNum: seqNum))
+        case .eDataBlock(let eDataBlock):
+            let eDataBlockData = EDataBlockResponseData(blockData: eDataBlock.blockData)
+            return .success(.eDataBlockResponse(eDataBlockData, seqNum: seqNum))
         case .none:
             return .failure(.emptyResponse)
         }
@@ -77,11 +80,12 @@ public class MessageParser {
 
 public enum ParsedMessage {
     case infoResponse(InfoResponseData, seqNum: UInt32)
+    case eDataBlockResponse(EDataBlockResponseData, seqNum: UInt32)
     case statusEvent(String, seqNum: UInt32)
 
     public var seqNum: UInt32 {
         switch self {
-        case .infoResponse(_, let seqNum), .statusEvent(_, let seqNum):
+        case .infoResponse(_, let seqNum), .eDataBlockResponse(_, let seqNum), .statusEvent(_, let seqNum):
             return seqNum
         }
     }

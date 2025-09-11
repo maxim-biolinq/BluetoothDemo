@@ -11,6 +11,8 @@ public extension PeripheralCommand {
         switch self {
         case .requestInfo:
             return try Self.processInfoRequest(seqNum: seqNum)
+        case .getEData(let blockNum):
+            return try Self.processEDataBlockRequest(blockNum: blockNum, seqNum: seqNum)
         }
     }
 
@@ -31,6 +33,27 @@ public extension PeripheralCommand {
         print("Commands: Prepared info request (seq: \(seqNum))")
 
         return CommandData(data: data, seqNum: seqNum, command: .requestInfo)
+    }
+
+    // MARK: - EData Block Command Implementation
+
+    private static func processEDataBlockRequest(blockNum: UInt32, seqNum: UInt32) throws -> CommandData {
+        var bleMessage = Iris_BLEMessage()
+        bleMessage.seqNum = seqNum
+
+        var rxMessage = Iris_BLEMessageChRx()
+        var request = Iris_BLEMessageChRxRequest()
+        var eDataBlockRequest = Iris_EDataBlockRequest()
+        eDataBlockRequest.blockNum = blockNum
+        request.eDataBlock = eDataBlockRequest
+
+        rxMessage.request = request
+        bleMessage.rxMsg = rxMessage
+
+        let data = try bleMessage.serializedData()
+        print("Commands: Prepared eDataBlock request for block \(blockNum) (seq: \(seqNum))")
+
+        return CommandData(data: data, seqNum: seqNum, command: .getEData(blockNum: blockNum))
     }
 }
 

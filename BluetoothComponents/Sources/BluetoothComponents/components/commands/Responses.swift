@@ -10,6 +10,8 @@ public extension ParsedMessage {
         switch self {
         case .infoResponse(let infoData, let seqNum):
             return Self.processInfoResponse(infoData, seqNum: seqNum)
+        case .eDataBlockResponse(let eDataBlockData, let seqNum):
+            return Self.processEDataBlockResponse(eDataBlockData, seqNum: seqNum)
         case .statusEvent:
             return nil // Status events don't correlate to specific commands
         }
@@ -24,6 +26,15 @@ public extension ParsedMessage {
         print("  status: \(infoData.status)")
 
         return .infoResponse(infoData)
+    }
+
+    // MARK: - EData Block Response Implementation
+
+    private static func processEDataBlockResponse(_ eDataBlockData: EDataBlockResponseData, seqNum: UInt32) -> CommandResponse {
+        print("Commands: EDataBlockResponse (seq: \(seqNum)):")
+        print("  block_data: \(eDataBlockData.blockData.count) bytes")
+
+        return .eDataBlockResponse(eDataBlockData)
     }
 }
 

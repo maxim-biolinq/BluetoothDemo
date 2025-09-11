@@ -19,4 +19,19 @@ final class CommandServiceTests: XCTestCase {
         print("✅ Pure input/output interface maintained")
         print("✅ Command logic extracted from PeripheralService")
     }
+
+    func testGetEDataCommand() {
+        // Test that getEData command can be processed
+        let commandService = CommandService()
+
+        // Test command creation with different block numbers
+        let getEDataCommand = PeripheralCommand.getEData(blockNum: 0)
+        let getEDataCommand2 = PeripheralCommand.getEData(blockNum: 5)
+
+        // Test that command service can handle the commands (compilation test)
+        commandService.commandInput.send(getEDataCommand)
+        commandService.commandInput.send(getEDataCommand2)
+
+        print("✅ getEData commands created and processed successfully")
+    }
 }

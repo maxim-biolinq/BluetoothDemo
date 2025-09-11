@@ -89,6 +89,7 @@ struct Iris_EDataBlockRequest: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
+  /// zero-indexed block number
   var blockNum: UInt32 = 0
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -101,7 +102,7 @@ struct Iris_EDataBlockResponse: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  /// up to 512 byte block of engineering data
+  /// up to max_size defined in system.options
   var blockData: Data = Data()
 
   var unknownFields = SwiftProtobuf.UnknownStorage()

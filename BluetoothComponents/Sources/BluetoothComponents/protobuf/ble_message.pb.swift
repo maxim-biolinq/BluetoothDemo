@@ -102,10 +102,19 @@ struct Iris_BLEMessageChTxResponse: Sendable {
     set {msg = .info(newValue)}
   }
 
+  var eDataBlock: Iris_EDataBlockResponse {
+    get {
+      if case .eDataBlock(let v)? = msg {return v}
+      return Iris_EDataBlockResponse()
+    }
+    set {msg = .eDataBlock(newValue)}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   enum OneOf_Msg: Equatable, Sendable {
     case info(Iris_InfoResponse)
+    case eDataBlock(Iris_EDataBlockResponse)
 
   }
 
@@ -376,7 +385,7 @@ extension Iris_BLEMessageChRxCommand: SwiftProtobuf.Message, SwiftProtobuf._Mess
 
 extension Iris_BLEMessageChTxResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".BLEMessageChTxResponse"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}rsp_num\0\u{1}info\0")
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}rsp_num\0\u{1}info\0\u{3}e_data_block\0")
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -398,6 +407,19 @@ extension Iris_BLEMessageChTxResponse: SwiftProtobuf.Message, SwiftProtobuf._Mes
           self.msg = .info(v)
         }
       }()
+      case 3: try {
+        var v: Iris_EDataBlockResponse?
+        var hadOneofValue = false
+        if let current = self.msg {
+          hadOneofValue = true
+          if case .eDataBlock(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.msg = .eDataBlock(v)
+        }
+      }()
       default: break
       }
     }
@@ -411,9 +433,17 @@ extension Iris_BLEMessageChTxResponse: SwiftProtobuf.Message, SwiftProtobuf._Mes
     if self.rspNum != 0 {
       try visitor.visitSingularUInt32Field(value: self.rspNum, fieldNumber: 1)
     }
-    try { if case .info(let v)? = self.msg {
+    switch self.msg {
+    case .info?: try {
+      guard case .info(let v)? = self.msg else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-    } }()
+    }()
+    case .eDataBlock?: try {
+      guard case .eDataBlock(let v)? = self.msg else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    }()
+    case nil: break
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
