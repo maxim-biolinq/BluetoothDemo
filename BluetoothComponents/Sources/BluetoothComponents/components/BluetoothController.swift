@@ -7,7 +7,7 @@ import Combine
 // MARK: - Bluetooth Controller Component
 // Input: scan and connection commands
 // Output: discovered peripherals and connected peripheral
-public class BluetoothController: NSObject, ObservableObject, CBCentralManagerDelegate {
+public class BluetoothController: NSObject, ObservableObject, CBCentralManagerDelegate, ComponentWiring {
 
     private var centralManager: CBCentralManager!
 
@@ -19,7 +19,7 @@ public class BluetoothController: NSObject, ObservableObject, CBCentralManagerDe
     public let connectionInput = PassthroughSubject<ConnectionRequest, Never>()
     @Published public var connectedPeripheral: CBPeripheral?
 
-    private var cancellables = Set<AnyCancellable>()
+    public var cancellables = Set<AnyCancellable>()
 
     public enum ScanCommand {
         case start
@@ -39,17 +39,13 @@ public class BluetoothController: NSObject, ObservableObject, CBCentralManagerDe
             CBCentralManagerOptionShowPowerAlertKey: true
         ])
 
-        scanInput
-            .sink { [weak self] command in
-                self?.handleScanCommand(command)
-            }
-            .store(in: &cancellables)
+        connect {
+            scanInput
+                .call(handleScanCommand, on: self)
 
-        connectionInput
-            .sink { [weak self] request in
-                self?.handleConnectionRequest(request)
-            }
-            .store(in: &cancellables)
+            connectionInput
+                .call(handleConnectionRequest, on: self)
+        }
     }
 
     private func handleScanCommand(_ command: ScanCommand) {

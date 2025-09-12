@@ -27,6 +27,7 @@ let package = Package(
             exclude: ["docs", "protobuf/.git", "protobuf/.gitignore", "protobuf/.gitmodules", "protobuf/.vscode", "protobuf/Makefile", "protobuf/README.md", "protobuf/external", "protobuf/generated/c", "protobuf/generated/python", "protobuf/protolint.yaml", "protobuf/source"],
             sources: [
                 "BluetoothSession.swift",
+                "Extensions.swift",
                 "components",
                 "protobuf/generated/swift/source"
             ]),

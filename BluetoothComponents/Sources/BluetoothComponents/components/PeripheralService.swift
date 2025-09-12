@@ -9,7 +9,7 @@ import SwiftProtobuf
 // Input: command requests
 // Output: service state and command responses
 // Lifecycle: Created per peripheral connection, destroyed on disconnect
-public class PeripheralService: NSObject, ObservableObject {
+public class PeripheralService: NSObject, ObservableObject, ComponentWiring {
 
     // MARK: - Constants
     public static let COMMAND_CHAR_UUID = CBUUID(string: "758e1601-6cae-4265-b32d-3406022a1463") // RX Char
@@ -27,19 +27,17 @@ public class PeripheralService: NSObject, ObservableObject {
     private var commandCharacteristic: CBCharacteristic?
     private var responseCharacteristic: CBCharacteristic?
 
-    private var cancellables = Set<AnyCancellable>()
+    public var cancellables = Set<AnyCancellable>()
 
     public init(peripheral: CBPeripheral) {
         self.peripheral = peripheral
         super.init()
 
         // Wire command input
-        commandInput
-            .sink { [weak self] command in
-                self?.handleCommand(command)
-            }
-            .store(in: &cancellables)
-
+        connect {
+            commandInput
+                .call(handleCommand, on: self)
+        }
         // Start service discovery immediately
         peripheral.delegate = self
         peripheral.discoverServices(nil)
