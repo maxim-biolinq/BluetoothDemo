@@ -26,7 +26,6 @@ class BluetoothSessionTests: XCTestCase {
     func testSessionInitialization() {
         // Session should initialize with empty state
         XCTAssertTrue(session.filteredPeripherals.isEmpty)
-        XCTAssertTrue(session.connectionStates.isEmpty)
         XCTAssertEqual(session.serviceState, ServiceState.discovering)
         XCTAssertNil(session.lastInfoResponse)
     }

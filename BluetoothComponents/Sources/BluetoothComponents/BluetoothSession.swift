@@ -10,6 +10,8 @@ import Foundation
 import CoreBluetooth
 import Combine
 
+
+
 // MARK: - Bluetooth Session
 // Convenient wrapper that wires components together
 // Clients can still use individual components if they prefer custom wiring
@@ -17,7 +19,6 @@ public class BluetoothSession: ObservableObject {
 
     // MARK: - Public Outputs
     @Published public var filteredPeripherals: [CBPeripheral] = []
-    @Published public var connectionStates: [UUID: CBPeripheralState] = [:]
     @Published public var serviceState: ServiceState = .discovering
     @Published public var lastInfoResponse: InfoResponseData?
     @Published public var lastEDataResponse: EDataBlockResponseData?
@@ -101,23 +102,17 @@ public class BluetoothSession: ObservableObject {
     // MARK: - Component Wiring
 
     private func setupWiring() {
-        // Wire controller output to filter input
+        // Wire controller output directly to filter input
         controller.$discoveredPeripherals
             .sink { [weak self] peripherals in
                 self?.filter.peripheralsInput.send(peripherals)
             }
             .store(in: &cancellables)
 
-        // Wire filter output to public output
+        // Wire filter output directly to public output
         filter.peripheralsOutput
             .receive(on: DispatchQueue.main)
             .assign(to: \.filteredPeripherals, on: self)
-            .store(in: &cancellables)
-
-        // Wire controller connection states to public output
-        controller.$connectionStates
-            .receive(on: DispatchQueue.main)
-            .assign(to: \.connectionStates, on: self)
             .store(in: &cancellables)
 
         // Handle peripheral connection/disconnection

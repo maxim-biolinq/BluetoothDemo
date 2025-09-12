@@ -100,7 +100,6 @@ struct BluetoothView: View {
             List(session.filteredPeripherals, id: \.identifier) { peripheral in
                 PeripheralRow(
                     peripheral: peripheral,
-                    connectionState: session.connectionStates[peripheral.identifier] ?? .disconnected,
                     onConnect: { shouldConnect in
                         session.connect(peripheral: peripheral)
                     }

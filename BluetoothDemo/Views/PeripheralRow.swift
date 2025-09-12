@@ -7,12 +7,10 @@ import CoreBluetooth
 // Simple SwiftUI view component for displaying peripheral devices
 struct PeripheralRow: View {
     let peripheral: CBPeripheral
-    let connectionState: CBPeripheralState
     let onConnect: (Bool) -> Void
 
-    init(peripheral: CBPeripheral, connectionState: CBPeripheralState, onConnect: @escaping (Bool) -> Void) {
+    init(peripheral: CBPeripheral, onConnect: @escaping (Bool) -> Void) {
         self.peripheral = peripheral
-        self.connectionState = connectionState
         self.onConnect = onConnect
     }
 
@@ -24,7 +22,7 @@ struct PeripheralRow: View {
             Spacer()
 
             Button(buttonText) {
-                onConnect(connectionState != .connected)
+                onConnect(peripheral.state != .connected)
             }
             .padding()
             .background(buttonColor)
@@ -33,7 +31,7 @@ struct PeripheralRow: View {
     }
 
     private var buttonText: String {
-        switch connectionState {
+        switch peripheral.state {
         case .connected: return "Connected"
         case .connecting: return "Connecting..."
         default: return "Connect"
@@ -41,7 +39,7 @@ struct PeripheralRow: View {
     }
 
     private var buttonColor: Color {
-        switch connectionState {
+        switch peripheral.state {
         case .connected: return .green
         case .connecting: return .orange
         default: return .blue
