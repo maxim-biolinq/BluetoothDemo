@@ -6,7 +6,7 @@ import Combine
 
 // MARK: - Bluetooth Controller Component
 // Input: scan and connection commands
-// Output: discovered peripherals, connection states, and connected peripheral
+// Output: discovered peripherals and connected peripheral
 public class BluetoothController: NSObject, ObservableObject, CBCentralManagerDelegate {
 
     private var centralManager: CBCentralManager!
@@ -17,7 +17,6 @@ public class BluetoothController: NSObject, ObservableObject, CBCentralManagerDe
 
     // Connection inputs/outputs
     public let connectionInput = PassthroughSubject<ConnectionRequest, Never>()
-    @Published public var connectionStates: [UUID: CBPeripheralState] = [:]
     @Published public var connectedPeripheral: CBPeripheral?
 
     private var cancellables = Set<AnyCancellable>()
@@ -93,20 +92,17 @@ public class BluetoothController: NSObject, ObservableObject, CBCentralManagerDe
     }
 
     public func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
-        connectionStates[peripheral.identifier] = .connected
         connectedPeripheral = peripheral
         centralManager.stopScan()
     }
 
     public func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
-        connectionStates[peripheral.identifier] = .disconnected
         if connectedPeripheral == peripheral {
             connectedPeripheral = nil
         }
     }
 
     public func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
-        connectionStates[peripheral.identifier] = .disconnected
         if connectedPeripheral == peripheral {
             connectedPeripheral = nil
         }

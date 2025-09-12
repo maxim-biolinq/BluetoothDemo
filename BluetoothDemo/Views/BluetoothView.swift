@@ -101,7 +101,11 @@ struct BluetoothView: View {
                 PeripheralRow(
                     peripheral: peripheral,
                     onConnect: { shouldConnect in
-                        session.connect(peripheral: peripheral)
+                        if shouldConnect {
+                            session.connect(peripheral: peripheral)
+                        } else {
+                            session.disconnect()
+                        }
                     }
                 )
             }
