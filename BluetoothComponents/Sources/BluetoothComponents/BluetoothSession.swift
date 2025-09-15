@@ -14,7 +14,7 @@ import Combine
 // MARK: - Bluetooth Session
 // Convenient wrapper that wires components together
 // Clients can still use individual components if they prefer custom wiring
-public class BluetoothSession: ComponentWiringBase, ObservableObject {
+public class BluetoothSession: ObservableObject {
 
     // MARK: - Public Outputs
     @Published public var filteredPeripherals: [CBPeripheral] = []
@@ -33,13 +33,15 @@ public class BluetoothSession: ComponentWiringBase, ObservableObject {
     private var pendingMultiBlockRequest: [UInt32] = [] // ordered list of expected block numbers
     private var receivedBlocks: [UInt32: Data] = [:]
 
+    private var cancellables = Set<AnyCancellable>()
+
+
     public init(
     controller: BluetoothController = BluetoothController(),
     filter: PeripheralFilter = PeripheralFilter()
     ) {
         self.controller = controller
         self.filter = filter
-        super.init()
         setupWiring()
     }
 
@@ -101,7 +103,7 @@ public class BluetoothSession: ComponentWiringBase, ObservableObject {
     // MARK: - Component Wiring
 
     private func setupWiring() {
-        connect {
+        cancellables.store {
             // Wire controller output directly to filter input
             controller.$discoveredPeripherals
                 .send(to: \.peripheralsInput, on: filter)
@@ -139,7 +141,7 @@ public class BluetoothSession: ComponentWiringBase, ObservableObject {
     private func setupPeripheralServiceBindings() {
         guard let service = peripheralService else { return }
 
-        connect {
+        cancellables.store {
             // Wire service state to public output
             service.serviceStateOutput
                 .receive(on: DispatchQueue.main)

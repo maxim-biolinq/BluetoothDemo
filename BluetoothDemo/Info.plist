@@ -10,5 +10,7 @@
 	<string>This app requires Bluetooth access to scan and connect to nearby devices.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
 	<string>This app uses Bluetooth to discover and communicate with peripherals.</string>
+	<key>NSBluetoothDescriptor</key>
+	<string>This app requires Bluetooth access to scan and connect to nearby devices.</string>
 </dict>
 </plist>

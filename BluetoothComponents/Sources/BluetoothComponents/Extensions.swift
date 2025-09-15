@@ -7,24 +7,15 @@
 import Foundation
 import Combine
 
-// MARK: - Component Wiring Protocol
-public protocol ComponentWiring: AnyObject {
-    var cancellables: Set<AnyCancellable> { get set }
-}
 
-extension ComponentWiring {
+extension Set<AnyCancellable> {
     /// Wire multiple publishers to their destinations in a clean declarative way
-    internal func connect(@WiringBuilder _ builder: () -> [AnyCancellable]) {
+    mutating func store(@WiringBuilder _ builder: () -> [AnyCancellable]) {
         let newCancellables = builder()
         for cancellable in newCancellables {
-            cancellable.store(in: &cancellables)
+            cancellable.store(in: &self)
         }
     }
-}
-
-// MARK: - Component Wiring Base Class (for classes that don't need other inheritance)
-public class ComponentWiringBase: ComponentWiring {
-    public var cancellables = Set<AnyCancellable>()
 }
 
 @resultBuilder

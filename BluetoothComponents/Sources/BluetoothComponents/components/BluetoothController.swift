@@ -7,7 +7,7 @@ import Combine
 // MARK: - Bluetooth Controller Component
 // Input: scan and connection commands
 // Output: discovered peripherals and connected peripheral
-public class BluetoothController: NSObject, ObservableObject, CBCentralManagerDelegate, ComponentWiring {
+public class BluetoothController: NSObject, ObservableObject, CBCentralManagerDelegate {
 
     private var centralManager: CBCentralManager!
 
@@ -39,7 +39,7 @@ public class BluetoothController: NSObject, ObservableObject, CBCentralManagerDe
             CBCentralManagerOptionShowPowerAlertKey: true
         ])
 
-        connect {
+        cancellables.store {
             scanInput
                 .call(handleScanCommand, on: self)
 

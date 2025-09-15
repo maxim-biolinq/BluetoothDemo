@@ -9,7 +9,7 @@ import SwiftProtobuf
 // Input: command requests
 // Output: service state and command responses
 // Lifecycle: Created per peripheral connection, destroyed on disconnect
-public class PeripheralService: NSObject, ObservableObject, ComponentWiring {
+public class PeripheralService: NSObject, ObservableObject {
 
     // MARK: - Constants
     public static let COMMAND_CHAR_UUID = CBUUID(string: "758e1601-6cae-4265-b32d-3406022a1463") // RX Char
@@ -34,7 +34,7 @@ public class PeripheralService: NSObject, ObservableObject, ComponentWiring {
         super.init()
 
         // Wire command input
-        connect {
+        cancellables.store {
             commandInput
                 .call(handleCommand, on: self)
         }
