@@ -20,8 +20,6 @@ public class BluetoothSession: ObservableObject {
     @Published public var filteredPeripherals: [CBPeripheral] = []
     @Published public var serviceState: ServiceState = .discovering
     @Published public var lastInfoResponse: InfoResponseData?
-    @Published public var lastEDataResponse: EDataBlockResponseData?
-    @Published public var multiBlockEDataResults: [(blockNum: UInt32, data: Data)] = []
     @Published public var isMultiBlockRequestActive = false
 
     // MARK: - Components
@@ -30,8 +28,9 @@ public class BluetoothSession: ObservableObject {
     private var peripheralService: PeripheralService?
 
     // MARK: - Private Properties
-    private var pendingMultiBlockRequest: [UInt32] = [] // ordered list of expected block numbers
+    private var pendingRangeRequest: (startIndex: UInt32, endIndex: UInt32, expectedCount: Int)? = nil
     private var receivedBlocks: [UInt32: Data] = [:]
+    private var rangeRequestTimeout: Timer?
 
     private var cancellables = Set<AnyCancellable>()
 
@@ -75,29 +74,44 @@ public class BluetoothSession: ObservableObject {
         peripheralService?.commandInput.send(.requestInfo)
     }
 
-    public func requestEData(blockNum: UInt32) {
-        peripheralService?.commandInput.send(.getEData(blockNum: blockNum))
-    }
-
-    public func requestMultipleEDataBlocks(blockNums: [UInt32]) {
-        // Clear previous state
-        pendingMultiBlockRequest = blockNums.sorted()
+    public func requestEDataRange(startIndex: UInt32, endIndex: UInt32) {
+        // Clear previous state and set up for range request
+        let expectedBlockCount = endIndex - startIndex + 1
+        pendingRangeRequest = (startIndex: startIndex, endIndex: endIndex, expectedCount: Int(expectedBlockCount))
         receivedBlocks.removeAll()
 
         DispatchQueue.main.async {
-            self.multiBlockEDataResults.removeAll()
             self.isMultiBlockRequestActive = true
         }
 
-        // Send all requests - the CommandService will handle sequence numbers and correlation
-        for blockNum in blockNums {
-            peripheralService?.commandInput.send(.getEData(blockNum: blockNum))
-            Thread.sleep(forTimeInterval: 0.1)
+        print("BluetoothSession: Requesting EData range \(startIndex)-\(endIndex) (\(expectedBlockCount) blocks)")
+        peripheralService?.commandInput.send(.getEDataRange(startIndex: startIndex, endIndex: endIndex))
+
+        // Set up timeout
+        rangeRequestTimeout?.invalidate()
+        rangeRequestTimeout = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: false) { _ in
+            DispatchQueue.main.async {
+                if self.isMultiBlockRequestActive {
+                    self.isMultiBlockRequestActive = false
+                    print("BluetoothSession: Range request timed out")
+                }
+            }
         }
     }
 
+    public func requestEDataRange(_ range: ClosedRange<UInt32>) {
+        requestEDataRange(startIndex: range.lowerBound, endIndex: range.upperBound)
+    }
+
     public var combinedEDataBlocks: Data {
-        return multiBlockEDataResults.map { $0.data }.reduce(Data(), +)
+        // Sort blocks by index and combine their data
+        let sortedBlocks = receivedBlocks.sorted { $0.key < $1.key }
+        return sortedBlocks.map { $0.value }.reduce(Data(), +)
+    }
+
+    public var eDataBlocks: [(blockNum: UInt32, data: Data)] {
+        // Return sorted blocks for UI display
+        return receivedBlocks.sorted { $0.key < $1.key }.map { (blockNum: $0.key, data: $0.value) }
     }
 
     // MARK: - Component Wiring
@@ -125,11 +139,12 @@ public class BluetoothSession: ObservableObject {
 
         DispatchQueue.main.async {
             self.serviceState = .discovering
-            self.pendingMultiBlockRequest.removeAll()
+            self.pendingRangeRequest = nil
             self.receivedBlocks.removeAll()
-            self.multiBlockEDataResults.removeAll()
             self.isMultiBlockRequestActive = false
         }
+
+        rangeRequestTimeout?.invalidate()
 
         if let peripheral = peripheral {
             // Create new service for this peripheral
@@ -161,9 +176,8 @@ public class BluetoothSession: ObservableObject {
             }
         case .eDataBlockResponse(let data):
             DispatchQueue.main.async {
-                self.lastEDataResponse = data
                 self.handleEDataBlockResponse(data)
-                print("Received eDataBlock response: data length: \(data.blockData.count)")
+                print("Received eDataBlock response: index \(data.index), data length: \(data.blockData.count)")
             }
         case .error(let message):
             print("PeripheralService error: \(message)")
@@ -171,20 +185,25 @@ public class BluetoothSession: ObservableObject {
     }
 
     private func handleEDataBlockResponse(_ data: EDataBlockResponseData) {
-        // If we're in a multi-block request, consume responses in order
-        if isMultiBlockRequestActive && !pendingMultiBlockRequest.isEmpty {
-            let expectedBlockNum = pendingMultiBlockRequest.removeFirst()
-            receivedBlocks[expectedBlockNum] = data.blockData
+        // If we're in a range request, use the index from the response
+        if isMultiBlockRequestActive, let pendingRequest = pendingRangeRequest {
+            let blockIndex = data.index
 
-            DispatchQueue.main.async {
-                // Add to results in order
-                self.multiBlockEDataResults.append((blockNum: expectedBlockNum, data: data.blockData))
+            // Check if this block is within the expected range
+            if blockIndex >= pendingRequest.startIndex && blockIndex <= pendingRequest.endIndex {
+                receivedBlocks[blockIndex] = data.blockData
 
                 // Check if all blocks received
-                if self.pendingMultiBlockRequest.isEmpty {
-                    self.isMultiBlockRequestActive = false
-                    print("BluetoothSession: Multi-block request completed. Received \(self.multiBlockEDataResults.count) blocks.")
+                if receivedBlocks.count == pendingRequest.expectedCount {
+                    DispatchQueue.main.async {
+                        self.isMultiBlockRequestActive = false
+                        self.pendingRangeRequest = nil
+                        self.rangeRequestTimeout?.invalidate()
+                        print("BluetoothSession: Range request completed. Received \(self.receivedBlocks.count) blocks.")
+                    }
                 }
+            } else {
+                print("BluetoothSession: Received block index \(blockIndex) outside expected range \(pendingRequest.startIndex)-\(pendingRequest.endIndex)")
             }
         }
     }

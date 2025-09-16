@@ -42,7 +42,7 @@ struct BluetoothView: View {
                 .foregroundColor(.white)
 
                 Button("Get EData") {
-                    session.requestMultipleEDataBlocks(blockNums: [0, 1, 2])
+                    session.requestEDataRange(0...2)
                 }
                 .padding()
                 .background(Color.orange)
@@ -65,7 +65,7 @@ struct BluetoothView: View {
             }
 
             // Multi-Block EData Response Display
-            if !session.multiBlockEDataResults.isEmpty {
+            if !session.eDataBlocks.isEmpty {
                 VStack(alignment: .leading) {
                     Text("EData Blocks (0, 1, 2):")
                         .font(.headline)
@@ -75,7 +75,7 @@ struct BluetoothView: View {
                     Text("Combined Preview: \(session.combinedEDataBlocks.prefix(32).map { String(format: "%02x", $0) }.joined(separator: " "))")
                         .font(.system(.body, design: .monospaced))
 
-                    ForEach(session.multiBlockEDataResults, id: \.blockNum) { result in
+                    ForEach(session.eDataBlocks, id: \.blockNum) { result in
                         Text("Block \(result.blockNum): \(result.data.count) bytes - \(result.data.prefix(16).map { String(format: "%02x", $0) }.joined(separator: " "))")
                             .font(.system(.caption, design: .monospaced))
                     }

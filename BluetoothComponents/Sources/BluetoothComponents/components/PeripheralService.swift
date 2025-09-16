@@ -54,12 +54,6 @@ public class PeripheralService: NSObject, ObservableObject {
         case .failure(let error):
             commandResponseOutput.send(.error("Failed to process command: \(error.localizedDescription)"))
         }
-
-        // Also check for any timeout errors
-        let timeoutErrors = commandService.getTimeoutErrors()
-        for errorResponse in timeoutErrors {
-            commandResponseOutput.send(errorResponse)
-        }
     }
 
     // MARK: - Command Transmission
@@ -212,7 +206,7 @@ public enum ServiceState: Equatable {
 
 public enum PeripheralCommand {
     case requestInfo
-    case getEData(blockNum: UInt32)
+    case getEDataRange(startIndex: UInt32, endIndex: UInt32)
     // Future commands can be added here
 }
 
@@ -235,9 +229,11 @@ public struct InfoResponseData {
 }
 
 public struct EDataBlockResponseData {
+    public let index: UInt32
     public let blockData: Data
 
-    public init(blockData: Data) {
+    public init(index: UInt32, blockData: Data) {
+        self.index = index
         self.blockData = blockData
     }
 }

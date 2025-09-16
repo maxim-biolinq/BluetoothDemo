@@ -23,14 +23,14 @@ public struct MessageParser {
         switch bleMessage.msg {
         case .infoResponse(let info):
             let infoData = InfoResponseData(
-                numBlocks: info.numBlocks,
+                numBlocks: info.eDataBlockCount,
                 timestamp: info.timestamp,
                 status: statusToString(info.status)
             )
             return .success(.infoResponse(infoData, seqNum: seqNum))
 
         case .eDataBlockResponse(let eDataBlock):
-            let eDataBlockData = EDataBlockResponseData(blockData: eDataBlock.blockData)
+            let eDataBlockData = EDataBlockResponseData(index: eDataBlock.index, blockData: eDataBlock.data)
             return .success(.eDataBlockResponse(eDataBlockData, seqNum: seqNum))
 
         case .statusEvent(let statusEvent):
